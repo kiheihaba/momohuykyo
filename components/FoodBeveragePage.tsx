@@ -66,10 +66,31 @@ const FoodBeveragePage: React.FC<FoodBeveragePageProps> = ({ onBack }) => {
   // CSV Parsing Helper
   const parseCSV = (text: string): FoodItem[] => {
     const rows = text.split('\n');
-    const headers = rows[0].split(',').map(h => h.trim().replace(/[\r\n]+/g, ''));
+    
+    // Robust CSV Line Parser
+    // FIX: This regex splits by comma ONLY if it's not inside quotes.
+    // This preserves spaces within fields (e.g. "Trà Sữa Khoai Môn" stays intact).
+    const parseLine = (line: string): string[] => {
+        const parts = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
+        
+        return parts.map(part => {
+            let p = part.trim();
+            // Remove wrapping quotes if present
+            if (p.startsWith('"') && p.endsWith('"')) {
+                p = p.slice(1, -1);
+            }
+            // Handle escaped double quotes ("") -> (")
+            return p.replace(/""/g, '"');
+        });
+    };
+
+    if (rows.length === 0) return [];
+    
+    // Parse headers using the same robust logic
+    const headers = parseLine(rows[0]);
     
     // Mapping helper to find index by header name (insensitive)
-    const getIndex = (key: string) => headers.findIndex(h => h.toLowerCase() === key.toLowerCase());
+    const getIndex = (key: string) => headers.findIndex(h => h.toLowerCase().trim() === key.toLowerCase().trim());
 
     const idxName = getIndex('mon_an');
     const idxImage = getIndex('anh_mon_an');
@@ -77,27 +98,23 @@ const FoodBeveragePage: React.FC<FoodBeveragePageProps> = ({ onBack }) => {
     const idxShop = getIndex('ten_quan');
     const idxPhone = getIndex('sdt_zalo');
     const idxStatus = getIndex('trang_thai');
-    const idxAddress = getIndex('dia_chi'); // NEW Column
+    const idxAddress = getIndex('dia_chi');
     const idxCategory = getIndex('phan_loai');
     const idxDesc = getIndex('mo_ta');
 
     return rows.slice(1).filter(r => r.trim() !== '').map((row, index) => {
-      // Regex to split by comma but ignore commas inside quotes
-      const values = row.match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g) || [];
-      const clean = (val: string) => val ? val.replace(/^"|"$/g, '').trim() : '';
+      const values = parseLine(row);
       
-      // Basic splitting fallback if regex fails
-      const simpleValues = row.split(',');
       const getValue = (i: number) => {
-         if (i === -1) return '';
-         let val = values[i] || simpleValues[i] || '';
-         return clean(val);
+         if (i === -1 || i >= values.length) return '';
+         return values[i];
       };
 
       const status = getValue(idxStatus);
       const isOpen = status.toLowerCase() !== 'het';
       const name = getValue(idxName) || "Món chưa đặt tên";
       const shopName = getValue(idxShop) || "Cửa hàng Thạnh Lợi";
+      const address = getValue(idxAddress) || "Thạnh Lợi, Bến Lức";
       
       return {
         id: index,
@@ -109,10 +126,10 @@ const FoodBeveragePage: React.FC<FoodBeveragePageProps> = ({ onBack }) => {
         phone: getValue(idxPhone),
         status: status,
         isOpen: isOpen,
-        address: getValue(idxAddress) || "Thạnh Lợi, Bến Lức", // Default address if missing
+        address: address,
         description: getValue(idxDesc) || `Món ngon từ ${shopName}. Đặt hàng ngay để thưởng thức!`,
         category: getValue(idxCategory) || "Khác",
-        rating: 5.0, // Default rating
+        rating: 5.0,
       };
     });
   };
@@ -315,7 +332,7 @@ const FoodBeveragePage: React.FC<FoodBeveragePageProps> = ({ onBack }) => {
                                                 </span>
                                             </div>
                                             
-                                            {/* Address - Gray, Icon */}
+                                            {/* Address - Gray, Icon (NEW FEATURE) */}
                                             <div className="flex items-start gap-1.5 text-xs text-gray-500 pl-0.5 mb-3">
                                                 <MapPin size={12} className="mt-0.5 shrink-0 text-gray-600" />
                                                 <span className="line-clamp-2">{item.address}</span>
