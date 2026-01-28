@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   ArrowLeft, 
@@ -15,116 +15,34 @@ import {
   Utensils,
   Coffee,
   IceCream,
-  Wheat
+  Wheat,
+  RefreshCw,
+  AlertCircle
 } from 'lucide-react';
 
 interface FoodBeveragePageProps {
   onBack: () => void;
 }
 
-// Data Types
+// Data Types updated to match CSV structure mostly, keeping UI fields
 interface FoodItem {
   id: number;
-  name: string;
-  price: number;
-  shopName: string;
-  shopAvatar: string;
-  distance: string;
-  isOpen: boolean;
-  image: string;
-  description: string;
-  category: string;
-  isVerified: boolean; // For Editor's Choice
-  rating: number;
+  name: string; // mon_an
+  price: number; // gia_tien
+  shopName: string; // ten_quan
+  shopAvatar: string; // derived from ten_quan
+  distance: string; // default or calculated
+  isOpen: boolean; // derived from trang_thai
+  image: string; // anh_mon_an
+  description: string; // default if missing
+  category: string; // phan_loai (if exists) or default
+  phone: string; // sdt_zalo
+  status: string; // trang_thai (Het / Con)
+  rating: number; // default
 }
 
-// Mock Data
-const foodItems: FoodItem[] = [
-  {
-    id: 1,
-    name: "Cơm Tấm Sườn Bì Chả",
-    price: 35000,
-    shopName: "Cơm Tấm Cô Ba",
-    shopAvatar: "C",
-    distance: "0.5km",
-    isOpen: true,
-    image: "https://images.unsplash.com/photo-1595505776653-534a02c98d6c?auto=format&fit=crop&q=80&w=600",
-    description: "Sườn nướng mật ong thơm phức, bì trộn thính gạo rang tay, chả trứng muối béo ngậy. Kèm nước mắm kẹo độc quyền.",
-    category: "Cơm/Bún",
-    isVerified: true,
-    rating: 4.8
-  },
-  {
-    id: 2,
-    name: "Trà Sữa Nướng Trân Châu",
-    price: 25000,
-    shopName: "HuyKyo Tea",
-    shopAvatar: "H",
-    distance: "1.2km",
-    isOpen: true,
-    image: "https://images.unsplash.com/photo-1558160074-4d7d8bdf4256?auto=format&fit=crop&q=80&w=600",
-    description: "Trà sữa đậm vị trà, nướng caramen thơm lừng. Topping trân châu đường đen nấu mới mỗi 4 tiếng.",
-    category: "Trà sữa/Cafe",
-    isVerified: true,
-    rating: 5.0
-  },
-  {
-    id: 3,
-    name: "Bún Bò Huế Đặc Biệt",
-    price: 40000,
-    shopName: "Bún Bò O Nở",
-    shopAvatar: "O",
-    distance: "2.0km",
-    isOpen: false,
-    image: "https://images.unsplash.com/photo-1594994272210-67d1db05a107?auto=format&fit=crop&q=80&w=600",
-    description: "Nước dùng hầm xương ống 24h, chả cua chuẩn vị Huế. Khoanh giò heo to bự, ăn là ghiền.",
-    category: "Cơm/Bún",
-    isVerified: false,
-    rating: 4.5
-  },
-  {
-    id: 4,
-    name: "Xoài Lắc Muối Tôm",
-    price: 15000,
-    shopName: "Ăn Vặt 135",
-    shopAvatar: "A",
-    distance: "0.8km",
-    isOpen: true,
-    image: "https://images.unsplash.com/photo-1541832676-9b763b0239ef?auto=format&fit=crop&q=80&w=600",
-    description: "Xoài keo vàng giòn rụm, lắc đều với muối tôm Tây Ninh chính gốc và nước mắm đường.",
-    category: "Ăn vặt",
-    isVerified: false,
-    rating: 4.2
-  },
-  {
-    id: 5,
-    name: "Dưa Lưới Organic (1kg)",
-    price: 65000,
-    shopName: "Nông Trại Xanh",
-    shopAvatar: "N",
-    distance: "3.5km",
-    isOpen: true,
-    image: "https://images.unsplash.com/photo-1571152766348-18c66e749830?auto=format&fit=crop&q=80&w=600",
-    description: "Dưa lưới trồng nhà màng công nghệ cao tại Thạnh Lợi. Ngọt đậm, giòn tan, bao ăn từng trái.",
-    category: "Nông sản",
-    isVerified: true,
-    rating: 4.9
-  },
-  {
-    id: 6,
-    name: "Cafe Muối Kem Béo",
-    price: 20000,
-    shopName: "Góc Phố Coffee",
-    shopAvatar: "G",
-    distance: "0.3km",
-    isOpen: true,
-    image: "https://images.unsplash.com/photo-1541167760496-1628856ab772?auto=format&fit=crop&q=80&w=600",
-    description: "Sự kết hợp hoàn hảo giữa vị đắng cafe Robusta và vị mặn béo của lớp kem muối sánh mịn.",
-    category: "Trà sữa/Cafe",
-    isVerified: false,
-    rating: 4.6
-  }
-];
+// Google Sheet CSV Link
+const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRJrotBdzd-po6z_Zd6fbew0pqGgdDdZjRMf7vutpfJia2aFpNyTZNdvGZxN4MfcGtRwJWUrmICvZMF/pub?gid=0&single=true&output=csv";
 
 const categories = [
   { id: "all", name: "Tất cả", icon: <Utensils size={16} /> },
@@ -139,16 +57,99 @@ const FoodBeveragePage: React.FC<FoodBeveragePageProps> = ({ onBack }) => {
   const [showOpenOnly, setShowOpenOnly] = useState(false);
   const [selectedItem, setSelectedItem] = useState<FoodItem | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
+  
+  // State for fetched data
+  const [foodItems, setFoodItems] = useState<FoodItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // CSV Parsing Helper
+  const parseCSV = (text: string): FoodItem[] => {
+    const rows = text.split('\n');
+    const headers = rows[0].split(',').map(h => h.trim().replace(/[\r\n]+/g, ''));
+    
+    // Mapping helper to find index by header name (insensitive)
+    const getIndex = (key: string) => headers.findIndex(h => h.toLowerCase() === key.toLowerCase());
+
+    const idxName = getIndex('mon_an');
+    const idxImage = getIndex('anh_mon_an');
+    const idxPrice = getIndex('gia_tien');
+    const idxShop = getIndex('ten_quan');
+    const idxPhone = getIndex('sdt_zalo');
+    const idxStatus = getIndex('trang_thai');
+    const idxCategory = getIndex('phan_loai'); // Optional
+    const idxDesc = getIndex('mo_ta'); // Optional
+
+    return rows.slice(1).filter(r => r.trim() !== '').map((row, index) => {
+      // Regex to split by comma but ignore commas inside quotes
+      const values = row.match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g) || [];
+      const clean = (val: string) => val ? val.replace(/^"|"$/g, '').trim() : '';
+      
+      // Basic splitting fallback if regex fails or simple CSV
+      const simpleValues = row.split(',');
+      const getValue = (i: number) => {
+         if (i === -1) return '';
+         // Try regex match first, fallback to simple split
+         let val = values[i] || simpleValues[i] || '';
+         return clean(val);
+      };
+
+      const status = getValue(idxStatus);
+      const isOpen = status.toLowerCase() !== 'het';
+      const name = getValue(idxName) || "Món chưa đặt tên";
+      const shopName = getValue(idxShop) || "Cửa hàng Thạnh Lợi";
+      
+      return {
+        id: index,
+        name: name,
+        image: getValue(idxImage) || "https://placehold.co/600x600/1a1a1a/FFF?text=No+Image",
+        price: parseInt(getValue(idxPrice).replace(/\D/g, '')) || 0,
+        shopName: shopName,
+        shopAvatar: shopName.charAt(0).toUpperCase(),
+        phone: getValue(idxPhone),
+        status: status,
+        isOpen: isOpen,
+        distance: "Gần bạn", // Placeholder
+        description: getValue(idxDesc) || `Món ngon từ ${shopName}. Đặt hàng ngay để thưởng thức!`,
+        category: getValue(idxCategory) || "Khác",
+        rating: 5.0, // Default
+      };
+    });
+  };
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setIsLoading(true);
+        const response = await fetch(CSV_URL);
+        if (!response.ok) throw new Error("Không thể tải dữ liệu");
+        const text = await response.text();
+        const data = parseCSV(text);
+        setFoodItems(data);
+      } catch (err) {
+        console.error("Error fetching food data:", err);
+        setError("Không thể kết nối đến máy chủ dữ liệu.");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
 
   // Filtering Logic
   const filteredItems = foodItems.filter(item => {
-    const matchesCategory = activeCategory === "all" || item.category === activeCategory;
+    // Normalize categories for better matching if CSV has rough data
+    const itemCat = item.category || "Khác";
+    const matchesCategory = activeCategory === "all" || itemCat.includes(activeCategory) || (activeCategory === "Khác" && !categories.some(c => itemCat.includes(c.name) && c.id !== 'all'));
+    
     const matchesOpen = showOpenOnly ? item.isOpen : true;
     const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase());
     return matchesCategory && matchesOpen && matchesSearch;
   });
 
-  const featuredItems = foodItems.filter(item => item.isVerified);
+  // Top rated items (simulated from fetched data)
+  const featuredItems = foodItems.slice(0, 3); 
 
   return (
     <div className="fixed inset-0 z-[60] bg-[#121212] overflow-y-auto overflow-x-hidden custom-scrollbar text-white">
@@ -233,128 +234,125 @@ const FoodBeveragePage: React.FC<FoodBeveragePageProps> = ({ onBack }) => {
 
       <div className="max-w-7xl mx-auto px-4 py-8">
         
-        {/* 4. HuyKyo Editor's Choice */}
-        {searchTerm === "" && (
-            <div className="mb-12">
-                <div className="flex items-center gap-2 mb-6">
-                    <Star className="text-brand-cyan fill-brand-cyan" size={20} />
-                    <h2 className="text-xl font-bold uppercase tracking-wider text-white">
-                        HuyKyo Đề Xuất
-                    </h2>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    {featuredItems.slice(0, 3).map((item) => (
-                         <div 
-                            key={`featured-${item.id}`}
-                            onClick={() => setSelectedItem(item)}
-                            className="relative group cursor-pointer rounded-2xl overflow-hidden border border-gray-800 bg-[#1a1a1a]"
-                         >
-                            {/* Verified Badge */}
-                            <div className="absolute top-3 left-3 z-10 bg-brand-cyan text-black text-[10px] font-black uppercase px-2 py-1 rounded flex items-center gap-1 shadow-[0_0_10px_rgba(0,255,255,0.5)]">
-                                <CheckCircle2 size={10} /> Verified by HuyKyo
-                            </div>
-
-                            <div className="h-48 overflow-hidden">
-                                <img src={item.image} alt={item.name} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
-                            </div>
-                            <div className="p-4 bg-gradient-to-t from-black to-[#1a1a1a]">
-                                <h3 className="font-bold text-lg text-white mb-1 truncate">{item.name}</h3>
-                                <div className="flex justify-between items-center">
-                                    <div className="flex items-center gap-2">
-                                        <div className="w-6 h-6 rounded-full bg-gray-700 flex items-center justify-center text-xs font-bold">{item.shopAvatar}</div>
-                                        <span className="text-gray-400 text-xs">{item.shopName}</span>
-                                    </div>
-                                    <span className="text-brand-cyan font-bold">{item.price.toLocaleString('vi-VN')}đ</span>
-                                </div>
-                            </div>
-                         </div>
-                    ))}
-                </div>
-            </div>
+        {/* Loading / Error States */}
+        {isLoading && (
+          <div className="flex flex-col items-center justify-center py-20 text-gray-400">
+             <RefreshCw className="animate-spin mb-4 text-brand-cyan" size={32} />
+             <p>Đang tải menu món ngon...</p>
+          </div>
         )}
 
-        {/* 5. Food Listing Grid */}
-        <h2 className="text-xl font-bold uppercase tracking-wider text-white mb-6 flex items-center gap-2">
-             <Utensils className="text-gray-500" size={20} /> Danh sách món ngon
-        </h2>
-        
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
-            {filteredItems.map((item) => (
-                <motion.div
-                    key={item.id}
-                    layout
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    whileHover={{ y: -5 }}
-                    onClick={() => setSelectedItem(item)}
-                    className="group bg-[#1a1a1a]/50 backdrop-blur-sm border border-gray-800 rounded-xl overflow-hidden hover:border-brand-cyan/50 hover:shadow-[0_0_15px_rgba(0,255,255,0.1)] transition-all duration-300 cursor-pointer flex flex-col h-full"
-                >
-                    {/* Image */}
-                    <div className="relative aspect-square overflow-hidden">
-                        <img 
-                            src={item.image} 
-                            alt={item.name} 
-                            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-                        />
-                        {/* Status Label */}
-                        <div className="absolute bottom-2 left-2">
-                             {item.isOpen ? (
-                                 <span className="bg-black/60 backdrop-blur-md text-green-400 border border-green-500/30 text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
-                                     <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></div> Mở cửa
-                                 </span>
-                             ) : (
-                                <span className="bg-black/80 text-gray-400 text-[10px] font-bold px-2 py-0.5 rounded-full">
-                                    Đóng cửa
-                                </span>
-                             )}
-                        </div>
+        {error && (
+           <div className="flex flex-col items-center justify-center py-20 text-red-500">
+             <AlertCircle size={32} className="mb-4" />
+             <p>{error}</p>
+           </div>
+        )}
+
+        {!isLoading && !error && (
+            <>
+                {/* 5. Food Listing Grid */}
+                <h2 className="text-xl font-bold uppercase tracking-wider text-white mb-6 flex items-center gap-2">
+                    <Utensils className="text-gray-500" size={20} /> Danh sách món ngon ({filteredItems.length})
+                </h2>
+                
+                {filteredItems.length === 0 ? (
+                    <div className="text-center py-12 text-gray-500">
+                        <p>Không tìm thấy món ăn nào phù hợp.</p>
                     </div>
+                ) : (
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
+                        {filteredItems.map((item) => {
+                            const isSoldOut = item.status?.toLowerCase() === 'het';
 
-                    {/* Content */}
-                    <div className="p-3 md:p-4 flex flex-col flex-grow">
-                        <h3 className="text-sm md:text-base font-bold text-white mb-1 line-clamp-2 min-h-[40px]">
-                            {item.name}
-                        </h3>
-                        <p className="text-brand-cyan font-bold text-base md:text-lg mb-3">
-                            {item.price.toLocaleString('vi-VN')}đ
-                        </p>
+                            return (
+                                <motion.div
+                                    key={item.id}
+                                    layout
+                                    initial={{ opacity: 0, scale: 0.9 }}
+                                    animate={{ opacity: 1, scale: 1 }}
+                                    whileHover={{ y: isSoldOut ? 0 : -5 }}
+                                    onClick={() => !isSoldOut && setSelectedItem(item)}
+                                    className={`group bg-[#1a1a1a]/50 backdrop-blur-sm border border-gray-800 rounded-xl overflow-hidden transition-all duration-300 flex flex-col h-full relative ${
+                                        isSoldOut ? 'opacity-60 grayscale cursor-not-allowed border-red-900/30' : 'hover:border-brand-cyan/50 hover:shadow-[0_0_15px_rgba(0,255,255,0.1)] cursor-pointer'
+                                    }`}
+                                >
+                                    {/* Image */}
+                                    <div className="relative aspect-square overflow-hidden">
+                                        <img 
+                                            src={item.image} 
+                                            alt={item.name} 
+                                            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                                            onError={(e) => {
+                                                (e.target as HTMLImageElement).src = "https://placehold.co/600x600/1a1a1a/FFF?text=HuyKyo+Food";
+                                            }}
+                                        />
+                                        {/* Status Label */}
+                                        <div className="absolute bottom-2 left-2 z-10">
+                                            {isSoldOut ? (
+                                                <span className="bg-red-600/90 text-white text-[10px] font-black px-3 py-1 rounded-full uppercase shadow-md">
+                                                    HẾT MÓN
+                                                </span>
+                                            ) : (
+                                                <span className="bg-black/60 backdrop-blur-md text-green-400 border border-green-500/30 text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
+                                                    <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></div> Mở cửa
+                                                </span>
+                                            )}
+                                        </div>
+                                    </div>
 
-                        <div className="mt-auto pt-3 border-t border-gray-800 flex items-center justify-between">
-                            <div className="flex items-center gap-2 overflow-hidden">
-                                <div className="w-5 h-5 md:w-6 md:h-6 rounded-full bg-gray-700 flex-shrink-0 flex items-center justify-center text-[10px] font-bold">
-                                    {item.shopAvatar}
-                                </div>
-                                <div className="flex flex-col truncate">
-                                    <span className="text-[10px] md:text-xs text-gray-300 truncate font-medium">{item.shopName}</span>
-                                    <span className="text-[9px] text-gray-500 flex items-center gap-0.5"><MapPin size={8}/> {item.distance}</span>
-                                </div>
-                            </div>
-                        </div>
+                                    {/* Content */}
+                                    <div className="p-3 md:p-4 flex flex-col flex-grow">
+                                        <h3 className="text-sm md:text-base font-bold text-white mb-1 line-clamp-2 min-h-[40px]">
+                                            {item.name}
+                                        </h3>
+                                        <p className={`font-bold text-base md:text-lg mb-2 ${isSoldOut ? 'text-gray-500 line-through' : 'text-brand-cyan'}`}>
+                                            {item.price.toLocaleString('vi-VN')}đ
+                                        </p>
 
-                        {/* Actions (Visible on Mobile/Hover Desktop) */}
-                        <div className="grid grid-cols-2 gap-2 mt-3">
-                            <button 
-                                onClick={(e) => { e.stopPropagation(); /* Call Logic */ }}
-                                className="bg-white text-black py-1.5 rounded text-[10px] md:text-xs font-bold uppercase hover:bg-brand-cyan transition-colors flex items-center justify-center gap-1"
-                            >
-                                <Phone size={12} /> Gọi
-                            </button>
-                            <button 
-                                onClick={(e) => { e.stopPropagation(); /* Zalo Logic */ }}
-                                className="bg-blue-600 text-white py-1.5 rounded text-[10px] md:text-xs font-bold uppercase hover:bg-blue-500 transition-colors flex items-center justify-center gap-1"
-                            >
-                                <MessageCircle size={12} /> Zalo
-                            </button>
-                        </div>
+                                        <div className="mt-auto pt-3 border-t border-gray-800 flex items-center justify-between">
+                                            <div className="flex items-center gap-2 overflow-hidden w-full">
+                                                <div className="w-5 h-5 md:w-6 md:h-6 rounded-full bg-gray-700 flex-shrink-0 flex items-center justify-center text-[10px] font-bold">
+                                                    {item.shopAvatar}
+                                                </div>
+                                                <span className="text-[10px] md:text-xs text-gray-300 truncate font-medium flex-1">
+                                                    {item.shopName}
+                                                </span>
+                                            </div>
+                                        </div>
+
+                                        {/* Actions */}
+                                        <div className="mt-3">
+                                            {isSoldOut ? (
+                                                <button 
+                                                    disabled 
+                                                    className="w-full bg-gray-700 text-gray-400 py-2 rounded text-[10px] md:text-xs font-bold uppercase cursor-not-allowed flex items-center justify-center gap-1"
+                                                >
+                                                    Tạm hết hàng
+                                                </button>
+                                            ) : (
+                                                <a 
+                                                    href={`tel:${item.phone}`}
+                                                    onClick={(e) => e.stopPropagation()}
+                                                    className="w-full bg-green-600 text-white py-2 rounded text-[10px] md:text-xs font-bold uppercase hover:bg-green-500 transition-colors flex items-center justify-center gap-1 shadow-lg shadow-green-900/20"
+                                                >
+                                                    <Phone size={14} /> Gọi Ngay
+                                                </a>
+                                            )}
+                                        </div>
+                                    </div>
+                                </motion.div>
+                            );
+                        })}
                     </div>
-                </motion.div>
-            ))}
-        </div>
+                )}
+            </>
+        )}
       </div>
 
       {/* 6. Product Detail Popup */}
       <AnimatePresence>
-        {selectedItem && (
+        {selectedItem && selectedItem.status.toLowerCase() !== 'het' && (
             <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
@@ -378,7 +376,14 @@ const FoodBeveragePage: React.FC<FoodBeveragePageProps> = ({ onBack }) => {
                     </button>
 
                     <div className="h-64 overflow-hidden relative">
-                        <img src={selectedItem.image} alt={selectedItem.name} className="w-full h-full object-cover" />
+                        <img 
+                            src={selectedItem.image} 
+                            alt={selectedItem.name} 
+                            className="w-full h-full object-cover" 
+                            onError={(e) => {
+                                (e.target as HTMLImageElement).src = "https://placehold.co/600x600/1a1a1a/FFF?text=HuyKyo+Food";
+                            }}
+                        />
                         <div className="absolute bottom-0 left-0 w-full h-24 bg-gradient-to-t from-[#1a1a1a] to-transparent"></div>
                     </div>
 
@@ -404,11 +409,6 @@ const FoodBeveragePage: React.FC<FoodBeveragePageProps> = ({ onBack }) => {
                                      <span className="flex items-center gap-1 text-yellow-500"><Star size={10} fill="currentColor" /> {selectedItem.rating}</span>
                                  </div>
                              </div>
-                             {selectedItem.isVerified && (
-                                 <div className="ml-auto text-brand-cyan">
-                                     <CheckCircle2 size={20} />
-                                 </div>
-                             )}
                         </div>
 
                         <p className="text-gray-400 leading-relaxed mb-8 text-sm md:text-base">
@@ -416,12 +416,20 @@ const FoodBeveragePage: React.FC<FoodBeveragePageProps> = ({ onBack }) => {
                         </p>
 
                         <div className="grid grid-cols-2 gap-4">
-                            <button className="flex items-center justify-center gap-2 bg-white text-black py-4 rounded-xl font-bold uppercase hover:bg-gray-200 transition-colors">
+                            <a 
+                                href={`tel:${selectedItem.phone}`}
+                                className="flex items-center justify-center gap-2 bg-white text-black py-4 rounded-xl font-bold uppercase hover:bg-gray-200 transition-colors"
+                            >
                                 <Phone size={20} /> Gọi Ngay
-                            </button>
-                            <button className="flex items-center justify-center gap-2 bg-blue-600 text-white py-4 rounded-xl font-bold uppercase hover:bg-blue-500 transition-colors">
+                            </a>
+                            <a 
+                                href={`https://zalo.me/${selectedItem.phone}`}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="flex items-center justify-center gap-2 bg-blue-600 text-white py-4 rounded-xl font-bold uppercase hover:bg-blue-500 transition-colors"
+                            >
                                 <MessageCircle size={20} /> Chat Zalo
-                            </button>
+                            </a>
                         </div>
                     </div>
                 </motion.div>
