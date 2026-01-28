@@ -24,18 +24,18 @@ interface FoodBeveragePageProps {
   onBack: () => void;
 }
 
-// Data Types updated to match CSV structure mostly, keeping UI fields
+// Data Types updated to match CSV structure
 interface FoodItem {
   id: number;
   name: string; // mon_an
   price: number; // gia_tien
   shopName: string; // ten_quan
   shopAvatar: string; // derived from ten_quan
-  distance: string; // default or calculated
+  address: string; // dia_chi (NEW)
   isOpen: boolean; // derived from trang_thai
   image: string; // anh_mon_an
-  description: string; // default if missing
-  category: string; // phan_loai (if exists) or default
+  description: string; // mo_ta
+  category: string; // phan_loai
   phone: string; // sdt_zalo
   status: string; // trang_thai (Het / Con)
   rating: number; // default
@@ -77,19 +77,19 @@ const FoodBeveragePage: React.FC<FoodBeveragePageProps> = ({ onBack }) => {
     const idxShop = getIndex('ten_quan');
     const idxPhone = getIndex('sdt_zalo');
     const idxStatus = getIndex('trang_thai');
-    const idxCategory = getIndex('phan_loai'); // Optional
-    const idxDesc = getIndex('mo_ta'); // Optional
+    const idxAddress = getIndex('dia_chi'); // NEW Column
+    const idxCategory = getIndex('phan_loai');
+    const idxDesc = getIndex('mo_ta');
 
     return rows.slice(1).filter(r => r.trim() !== '').map((row, index) => {
       // Regex to split by comma but ignore commas inside quotes
       const values = row.match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g) || [];
       const clean = (val: string) => val ? val.replace(/^"|"$/g, '').trim() : '';
       
-      // Basic splitting fallback if regex fails or simple CSV
+      // Basic splitting fallback if regex fails
       const simpleValues = row.split(',');
       const getValue = (i: number) => {
          if (i === -1) return '';
-         // Try regex match first, fallback to simple split
          let val = values[i] || simpleValues[i] || '';
          return clean(val);
       };
@@ -102,17 +102,17 @@ const FoodBeveragePage: React.FC<FoodBeveragePageProps> = ({ onBack }) => {
       return {
         id: index,
         name: name,
-        image: getValue(idxImage) || "https://placehold.co/600x600/1a1a1a/FFF?text=No+Image",
+        image: getValue(idxImage) || "https://placehold.co/600x600/1a1a1a/FFF?text=HuyKyo+Food",
         price: parseInt(getValue(idxPrice).replace(/\D/g, '')) || 0,
         shopName: shopName,
         shopAvatar: shopName.charAt(0).toUpperCase(),
         phone: getValue(idxPhone),
         status: status,
         isOpen: isOpen,
-        distance: "Gần bạn", // Placeholder
+        address: getValue(idxAddress) || "Thạnh Lợi, Bến Lức", // Default address if missing
         description: getValue(idxDesc) || `Món ngon từ ${shopName}. Đặt hàng ngay để thưởng thức!`,
         category: getValue(idxCategory) || "Khác",
-        rating: 5.0, // Default
+        rating: 5.0, // Default rating
       };
     });
   };
@@ -139,17 +139,12 @@ const FoodBeveragePage: React.FC<FoodBeveragePageProps> = ({ onBack }) => {
 
   // Filtering Logic
   const filteredItems = foodItems.filter(item => {
-    // Normalize categories for better matching if CSV has rough data
     const itemCat = item.category || "Khác";
     const matchesCategory = activeCategory === "all" || itemCat.includes(activeCategory) || (activeCategory === "Khác" && !categories.some(c => itemCat.includes(c.name) && c.id !== 'all'));
-    
     const matchesOpen = showOpenOnly ? item.isOpen : true;
     const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase());
     return matchesCategory && matchesOpen && matchesSearch;
   });
-
-  // Top rated items (simulated from fetched data)
-  const featuredItems = foodItems.slice(0, 3); 
 
   return (
     <div className="fixed inset-0 z-[60] bg-[#121212] overflow-y-auto overflow-x-hidden custom-scrollbar text-white">
@@ -199,7 +194,6 @@ const FoodBeveragePage: React.FC<FoodBeveragePageProps> = ({ onBack }) => {
       {/* 3. Smart Filter Bar */}
       <section className="sticky top-16 z-40 bg-[#121212] py-4 border-b border-gray-800 shadow-xl">
          <div className="max-w-7xl mx-auto px-4 flex gap-3 overflow-x-auto scrollbar-hide items-center">
-            {/* Toggle Open Now */}
             <button 
                 onClick={() => setShowOpenOnly(!showOpenOnly)}
                 className={`flex-shrink-0 flex items-center gap-2 px-4 py-2 rounded-full border text-xs font-bold uppercase transition-all ${
@@ -214,7 +208,6 @@ const FoodBeveragePage: React.FC<FoodBeveragePageProps> = ({ onBack }) => {
 
             <div className="w-[1px] h-6 bg-gray-800 mx-1"></div>
 
-            {/* Categories */}
             {categories.map((cat) => (
                 <button
                     key={cat.id}
@@ -233,7 +226,6 @@ const FoodBeveragePage: React.FC<FoodBeveragePageProps> = ({ onBack }) => {
       </section>
 
       <div className="max-w-7xl mx-auto px-4 py-8">
-        
         {/* Loading / Error States */}
         {isLoading && (
           <div className="flex flex-col items-center justify-center py-20 text-gray-400">
@@ -251,7 +243,6 @@ const FoodBeveragePage: React.FC<FoodBeveragePageProps> = ({ onBack }) => {
 
         {!isLoading && !error && (
             <>
-                {/* 5. Food Listing Grid */}
                 <h2 className="text-xl font-bold uppercase tracking-wider text-white mb-6 flex items-center gap-2">
                     <Utensils className="text-gray-500" size={20} /> Danh sách món ngon ({filteredItems.length})
                 </h2>
@@ -277,8 +268,8 @@ const FoodBeveragePage: React.FC<FoodBeveragePageProps> = ({ onBack }) => {
                                         isSoldOut ? 'opacity-60 grayscale cursor-not-allowed border-red-900/30' : 'hover:border-brand-cyan/50 hover:shadow-[0_0_15px_rgba(0,255,255,0.1)] cursor-pointer'
                                     }`}
                                 >
-                                    {/* Image */}
-                                    <div className="relative aspect-square overflow-hidden">
+                                    {/* Image (Top 1:1) */}
+                                    <div className="relative aspect-square overflow-hidden bg-gray-900">
                                         <img 
                                             src={item.image} 
                                             alt={item.name} 
@@ -301,44 +292,65 @@ const FoodBeveragePage: React.FC<FoodBeveragePageProps> = ({ onBack }) => {
                                         </div>
                                     </div>
 
-                                    {/* Content */}
+                                    {/* Card Body */}
                                     <div className="p-3 md:p-4 flex flex-col flex-grow">
-                                        <h3 className="text-sm md:text-base font-bold text-white mb-1 line-clamp-2 min-h-[40px]">
+                                        {/* Food Name - Large & Bold */}
+                                        <h3 className="text-base md:text-lg font-black text-white mb-1 line-clamp-2 min-h-[48px] leading-tight">
                                             {item.name}
                                         </h3>
-                                        <p className={`font-bold text-base md:text-lg mb-2 ${isSoldOut ? 'text-gray-500 line-through' : 'text-brand-cyan'}`}>
+                                        
+                                        {/* Price - Highlighted */}
+                                        <p className={`font-bold text-base md:text-lg mb-3 ${isSoldOut ? 'text-gray-500 line-through' : 'text-yellow-400'}`}>
                                             {item.price.toLocaleString('vi-VN')}đ
                                         </p>
 
-                                        <div className="mt-auto pt-3 border-t border-gray-800 flex items-center justify-between">
-                                            <div className="flex items-center gap-2 overflow-hidden w-full">
-                                                <div className="w-5 h-5 md:w-6 md:h-6 rounded-full bg-gray-700 flex-shrink-0 flex items-center justify-center text-[10px] font-bold">
+                                        <div className="mt-auto border-t border-gray-800 pt-3">
+                                            {/* Shop Name - Bold, Small */}
+                                            <div className="flex items-center gap-2 mb-1">
+                                                <div className="w-5 h-5 rounded-full bg-gray-700 flex-shrink-0 flex items-center justify-center text-[10px] font-bold text-white">
                                                     {item.shopAvatar}
                                                 </div>
-                                                <span className="text-[10px] md:text-xs text-gray-300 truncate font-medium flex-1">
+                                                <span className="text-sm font-bold text-gray-300">
                                                     {item.shopName}
                                                 </span>
                                             </div>
-                                        </div>
+                                            
+                                            {/* Address - Gray, Icon */}
+                                            <div className="flex items-start gap-1.5 text-xs text-gray-500 pl-0.5 mb-3">
+                                                <MapPin size={12} className="mt-0.5 shrink-0 text-gray-600" />
+                                                <span className="line-clamp-2">{item.address}</span>
+                                            </div>
 
-                                        {/* Actions */}
-                                        <div className="mt-3">
-                                            {isSoldOut ? (
-                                                <button 
-                                                    disabled 
-                                                    className="w-full bg-gray-700 text-gray-400 py-2 rounded text-[10px] md:text-xs font-bold uppercase cursor-not-allowed flex items-center justify-center gap-1"
-                                                >
-                                                    Tạm hết hàng
-                                                </button>
-                                            ) : (
-                                                <a 
-                                                    href={`tel:${item.phone}`}
-                                                    onClick={(e) => e.stopPropagation()}
-                                                    className="w-full bg-green-600 text-white py-2 rounded text-[10px] md:text-xs font-bold uppercase hover:bg-green-500 transition-colors flex items-center justify-center gap-1 shadow-lg shadow-green-900/20"
-                                                >
-                                                    <Phone size={14} /> Gọi Ngay
-                                                </a>
-                                            )}
+                                            {/* Action Buttons */}
+                                            <div className="grid grid-cols-2 gap-2 mt-2">
+                                                {isSoldOut ? (
+                                                    <button 
+                                                        disabled 
+                                                        className="col-span-2 w-full bg-gray-700 text-gray-400 py-2 rounded text-[10px] md:text-xs font-bold uppercase cursor-not-allowed flex items-center justify-center gap-1"
+                                                    >
+                                                        Tạm hết hàng
+                                                    </button>
+                                                ) : (
+                                                    <>
+                                                        <a 
+                                                            href={`tel:${item.phone}`}
+                                                            onClick={(e) => e.stopPropagation()}
+                                                            className="w-full bg-green-600 text-white py-2 rounded text-[10px] md:text-xs font-bold uppercase hover:bg-green-500 transition-colors flex items-center justify-center gap-1 shadow-lg shadow-green-900/20"
+                                                        >
+                                                            <Phone size={14} /> Gọi Ngay
+                                                        </a>
+                                                        <a 
+                                                            href={`https://zalo.me/${item.phone}`}
+                                                            target="_blank"
+                                                            rel="noreferrer"
+                                                            onClick={(e) => e.stopPropagation()}
+                                                            className="w-full bg-blue-600 text-white py-2 rounded text-[10px] md:text-xs font-bold uppercase hover:bg-blue-500 transition-colors flex items-center justify-center gap-1 shadow-lg shadow-blue-900/20"
+                                                        >
+                                                            <MessageCircle size={14} /> Zalo
+                                                        </a>
+                                                    </>
+                                                )}
+                                            </div>
                                         </div>
                                     </div>
                                 </motion.div>
@@ -350,7 +362,7 @@ const FoodBeveragePage: React.FC<FoodBeveragePageProps> = ({ onBack }) => {
         )}
       </div>
 
-      {/* 6. Product Detail Popup */}
+      {/* Product Detail Popup */}
       <AnimatePresence>
         {selectedItem && selectedItem.status.toLowerCase() !== 'het' && (
             <motion.div
@@ -393,19 +405,19 @@ const FoodBeveragePage: React.FC<FoodBeveragePageProps> = ({ onBack }) => {
                                 {selectedItem.name}
                             </h2>
                             <div className="text-right">
-                                <span className="block text-2xl font-bold text-brand-cyan">{selectedItem.price.toLocaleString('vi-VN')}đ</span>
+                                <span className="block text-2xl font-bold text-yellow-400">{selectedItem.price.toLocaleString('vi-VN')}đ</span>
                                 <span className="text-xs text-gray-500">Giá chưa bao gồm ship</span>
                             </div>
                         </div>
 
                         <div className="flex items-center gap-3 mb-6 bg-[#252525] p-3 rounded-lg border border-gray-700">
-                             <div className="w-10 h-10 rounded-full bg-gray-600 flex items-center justify-center font-bold text-lg">
+                             <div className="w-10 h-10 rounded-full bg-gray-600 flex items-center justify-center font-bold text-lg text-white">
                                  {selectedItem.shopAvatar}
                              </div>
                              <div>
                                  <p className="font-bold text-white text-sm">{selectedItem.shopName}</p>
                                  <div className="flex items-center gap-3 text-xs text-gray-400">
-                                     <span className="flex items-center gap-1"><MapPin size={10} /> {selectedItem.distance}</span>
+                                     <span className="flex items-center gap-1"><MapPin size={10} /> {selectedItem.address}</span>
                                      <span className="flex items-center gap-1 text-yellow-500"><Star size={10} fill="currentColor" /> {selectedItem.rating}</span>
                                  </div>
                              </div>
