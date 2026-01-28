@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { motion } from 'framer-motion';
 import { MonitorPlay, ShoppingBag, Bot, Palette } from 'lucide-react';
@@ -6,6 +7,7 @@ import { ServiceItem } from '../types';
 interface ServicesProps {
   onOpenMerch: () => void;
   onOpenServices: () => void;
+  onViewAllProjects: () => void;
 }
 
 const services: ServiceItem[] = [
@@ -39,7 +41,7 @@ const services: ServiceItem[] = [
   }
 ];
 
-const Services: React.FC<ServicesProps> = ({ onOpenMerch, onOpenServices }) => {
+const Services: React.FC<ServicesProps> = ({ onOpenMerch, onOpenServices, onViewAllProjects }) => {
   const getIcon = (type: string) => {
     switch (type) {
       case 'content': return <MonitorPlay size={24} />;
@@ -69,7 +71,10 @@ const Services: React.FC<ServicesProps> = ({ onOpenMerch, onOpenServices }) => {
               SẢN PHẨM VÀ DỊCH VỤ
             </h3>
           </div>
-          <button className="hidden md:block text-white border-b border-brand-cyan pb-1 hover:text-brand-cyan transition-colors mt-4 md:mt-0">
+          <button 
+            onClick={onViewAllProjects}
+            className="hidden md:block text-white border-b border-brand-cyan pb-1 hover:text-brand-cyan transition-colors mt-4 md:mt-0"
+          >
             Xem tất cả dự án
           </button>
         </div>
@@ -121,6 +126,16 @@ const Services: React.FC<ServicesProps> = ({ onOpenMerch, onOpenServices }) => {
             </motion.div>
           ))}
         </div>
+        
+         {/* Mobile Button */}
+         <div className="mt-8 text-center md:hidden">
+            <button 
+                onClick={onViewAllProjects}
+                className="text-white border-b border-brand-cyan pb-1 hover:text-brand-cyan transition-colors"
+            >
+                Xem tất cả dự án
+            </button>
+         </div>
       </div>
     </section>
   );

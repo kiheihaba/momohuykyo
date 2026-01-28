@@ -1,10 +1,11 @@
+
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { ArrowLeft, ShoppingBag } from 'lucide-react';
 import { Product } from '../types';
 import ProductModal from './ProductModal';
 
-const products: Product[] = [
+export const products: Product[] = [
   {
     id: 1,
     name: "Capy-Tech Oversized Tee",
