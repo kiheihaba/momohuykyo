@@ -22,6 +22,7 @@ import Footer from './Footer';
 
 interface ThanhLoiMarketPageProps {
   onBack: () => void;
+  onOpenFood?: () => void;
 }
 
 // Dữ liệu danh mục
@@ -88,8 +89,14 @@ const listings = [
   }
 ];
 
-const ThanhLoiMarketPage: React.FC<ThanhLoiMarketPageProps> = ({ onBack }) => {
+const ThanhLoiMarketPage: React.FC<ThanhLoiMarketPageProps> = ({ onBack, onOpenFood }) => {
   const [searchTerm, setSearchTerm] = useState("");
+
+  const handleCategoryClick = (catName: string) => {
+    if (catName === "Ẩm Thực" && onOpenFood) {
+        onOpenFood();
+    }
+  };
 
   return (
     <div className="bg-gray-50 min-h-screen font-sans text-gray-900">
@@ -162,6 +169,7 @@ const ThanhLoiMarketPage: React.FC<ThanhLoiMarketPageProps> = ({ onBack }) => {
                 <motion.div 
                     key={cat.id}
                     whileHover={{ y: -5 }}
+                    onClick={() => handleCategoryClick(cat.name)}
                     className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex flex-col items-center justify-center gap-3 cursor-pointer hover:shadow-md transition-all"
                 >
                     <div className={`p-3 rounded-full ${cat.color}`}>

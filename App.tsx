@@ -13,6 +13,7 @@ import PrivacyPolicy from './components/PrivacyPolicy';
 import BlogPage from './components/BlogPage';
 import AllProjectsPage from './components/AllProjectsPage';
 import ThanhLoiMarketPage from './components/ThanhLoiMarketPage';
+import FoodBeveragePage from './components/FoodBeveragePage';
 
 const App: React.FC = () => {
   const [showMerch, setShowMerch] = useState(false);
@@ -21,76 +22,67 @@ const App: React.FC = () => {
   const [showBlog, setShowBlog] = useState(false);
   const [showAllProjects, setShowAllProjects] = useState(false);
   const [showMarket, setShowMarket] = useState(false);
+  const [showFoodPage, setShowFoodPage] = useState(false);
 
   // Helper to handle view switching
-  const handleOpenMerch = () => {
+  const resetAllViews = () => {
+    setShowMerch(false);
     setShowServices(false);
     setShowPrivacy(false);
     setShowBlog(false);
     setShowAllProjects(false);
     setShowMarket(false);
+    setShowFoodPage(false);
+  };
+
+  const handleOpenMerch = () => {
+    resetAllViews();
     setShowMerch(true);
   };
 
   const handleOpenServices = () => {
-    setShowMerch(false);
-    setShowPrivacy(false);
-    setShowBlog(false);
-    setShowAllProjects(false);
-    setShowMarket(false);
+    resetAllViews();
     setShowServices(true);
   };
 
   const handleOpenPrivacy = () => {
-    setShowMerch(false);
-    setShowServices(false);
-    setShowBlog(false);
-    setShowAllProjects(false);
-    setShowMarket(false);
+    resetAllViews();
     setShowPrivacy(true);
   }
 
   const handleOpenBlog = () => {
-    setShowMerch(false);
-    setShowServices(false);
-    setShowPrivacy(false);
-    setShowAllProjects(false);
-    setShowMarket(false);
+    resetAllViews();
     setShowBlog(true);
   }
 
   const handleOpenAllProjects = () => {
-    setShowMerch(false);
-    setShowServices(false);
-    setShowPrivacy(false);
-    setShowBlog(false);
-    setShowMarket(false);
+    resetAllViews();
     setShowAllProjects(true);
   }
 
   const handleOpenMarket = () => {
-    setShowMerch(false);
-    setShowServices(false);
-    setShowPrivacy(false);
-    setShowBlog(false);
-    // Lưu ý: showAllProjects sẽ bị ẩn, nhưng luồng quay lại sẽ được xử lý
-    setShowAllProjects(false); 
+    resetAllViews();
     setShowMarket(true);
   }
 
+  const handleOpenFoodPage = () => {
+    resetAllViews();
+    setShowFoodPage(true);
+  }
+
   const handleBackToHome = () => {
-    setShowMerch(false);
-    setShowServices(false);
-    setShowPrivacy(false);
-    setShowBlog(false);
-    setShowAllProjects(false);
-    setShowMarket(false);
+    resetAllViews();
   };
 
-  // Nếu muốn quay lại All Projects thay vì Home
+  // Navigations back
   const handleBackToProjects = () => {
-    setShowMarket(false);
+    resetAllViews();
     setShowAllProjects(true);
+  }
+
+  const handleBackToMarket = () => {
+    resetAllViews();
+    setShowMarket(true);
   }
 
   if (showMerch) {
@@ -109,8 +101,12 @@ const App: React.FC = () => {
     return <BlogPage onBack={handleBackToHome} />;
   }
 
+  if (showFoodPage) {
+    return <FoodBeveragePage onBack={handleBackToMarket} />;
+  }
+
   if (showMarket) {
-    return <ThanhLoiMarketPage onBack={handleBackToProjects} />;
+    return <ThanhLoiMarketPage onBack={handleBackToProjects} onOpenFood={handleOpenFoodPage} />;
   }
 
   if (showAllProjects) {
