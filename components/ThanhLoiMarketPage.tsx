@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { 
   ArrowLeft, 
@@ -16,7 +16,8 @@ import {
   Home,
   Star,
   Camera,
-  Music
+  Music,
+  RefreshCw
 } from 'lucide-react';
 import Footer from './Footer';
 
@@ -28,6 +29,29 @@ interface ThanhLoiMarketPageProps {
   onOpenRealEstate?: () => void;
 }
 
+// Interface chuẩn cho Listing hiển thị ở trang chủ
+interface MarketListing {
+  id: string | number;
+  title: string;
+  price: string;
+  seller: string;
+  location: string;
+  image: string;
+  category: string;
+  phone?: string;
+  isAd?: boolean;
+  timestamp?: number; // Dùng để sort tin mới nhất
+}
+
+// 1. CẤU HÌNH LINK GOOGLE SHEET (CSV)
+// Bạn có thể thêm link cho các danh mục khác vào đây
+const SHEET_URLS = {
+    FOOD: "https://docs.google.com/spreadsheets/d/e/2PACX-1vRJrotBdzd-po6z_Zd6fbew0pqGgdDdZjRMf7vutpfJia2aFpNyTZNdvGZxN4MfcGtRwJWUrmICvZMF/pub?gid=0&single=true&output=csv",
+    SERVICES: "", // Điền Link CSV Sheet Dịch vụ vào đây
+    JOBS: "",     // Điền Link CSV Sheet Việc làm vào đây
+    REAL_ESTATE: "" // Điền Link CSV Sheet Nhà đất vào đây
+};
+
 // Dữ liệu danh mục
 const categories = [
   { id: 1, name: "Ẩm Thực", icon: <Utensils size={24} />, color: "bg-orange-100 text-orange-600" },
@@ -38,57 +62,51 @@ const categories = [
   { id: 6, name: "Bất động sản", icon: <Home size={24} />, color: "bg-purple-100 text-purple-600" },
 ];
 
-// Dữ liệu tin đăng mẫu
-const listings = [
+// Dữ liệu tin đăng mẫu (Fallback khi chưa có Sheet hoặc đang tải)
+const STATIC_LISTINGS: MarketListing[] = [
   {
-    id: 1,
-    title: "Gà ta thả vườn làm sẵn - Giao tận nơi",
-    price: "150.000 đ/kg",
-    seller: "Cô Ba Thạnh Lợi",
-    location: "Ấp 3, Xã Thạnh Lợi",
-    image: "https://images.unsplash.com/photo-1587593810167-a84920ea0781?auto=format&fit=crop&q=80&w=600",
-    category: "Ẩm Thực",
-    isAd: false
-  },
-  {
-    id: 2,
+    id: "s1",
     title: "Cần bán xe Wave Alpha đời 2020 chính chủ",
     price: "12.500.000 đ",
     seller: "Anh Tư Xe Máy",
     location: "Ngã 4 Thạnh Lợi",
     image: "https://images.unsplash.com/photo-1558981403-c5f9899a28bc?auto=format&fit=crop&q=80&w=600",
     category: "Xe Cộ",
-    isAd: false
+    isAd: false,
+    timestamp: 1
   },
   {
-    id: 3,
+    id: "s2",
     title: "Tuyển 5 thợ hồ làm công trình nhà ở",
     price: "500.000 đ/ngày",
     seller: "Cai Thầu Năm",
     location: "Khu dân cư 135",
     image: "https://images.unsplash.com/photo-1504307651254-35680f356dfd?auto=format&fit=crop&q=80&w=600",
     category: "Việc Làm",
-    isAd: false
+    isAd: false,
+    timestamp: 2
   },
   {
-    id: 4,
+    id: "s3",
     title: "Đất thổ cư 100m2 gần UBND xã",
     price: "850 triệu",
     seller: "BĐS Hưng Thịnh",
     location: "Trung tâm xã",
     image: "https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&q=80&w=600",
     category: "Bất động sản",
-    isAd: false
+    isAd: false,
+    timestamp: 3
   },
   {
-      id: 5,
+      id: "s4",
       title: "Sửa chữa điện nước tại nhà 24/7",
       price: "Thương lượng",
       seller: "Điện lạnh Minh Tuấn",
       location: "Phục vụ toàn xã",
       image: "https://images.unsplash.com/photo-1621905251189-08b45d6a269e?auto=format&fit=crop&q=80&w=600",
       category: "Dịch Vụ",
-      isAd: false
+      isAd: false,
+      timestamp: 4
   }
 ];
 
@@ -100,6 +118,81 @@ const ThanhLoiMarketPage: React.FC<ThanhLoiMarketPageProps> = ({
   onOpenRealEstate
 }) => {
   const [searchTerm, setSearchTerm] = useState("");
+  const [listings, setListings] = useState<MarketListing[]>(STATIC_LISTINGS);
+  const [isLoading, setIsLoading] = useState(false);
+
+  // Helper: Parse CSV Line safely
+  const parseCSVLine = (line: string): string[] => {
+      const parts = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
+      return parts.map(part => {
+          let p = part.trim();
+          if (p.startsWith('"') && p.endsWith('"')) p = p.slice(1, -1);
+          return p.replace(/""/g, '"');
+      });
+  };
+
+  useEffect(() => {
+    const fetchAllData = async () => {
+        setIsLoading(true);
+        let allNewListings: MarketListing[] = [];
+
+        // 1. Fetch Food Data
+        if (SHEET_URLS.FOOD) {
+            try {
+                const response = await fetch(SHEET_URLS.FOOD);
+                const text = await response.text();
+                const rows = text.split('\n').slice(1); // Skip header
+
+                const foodItems: MarketListing[] = rows
+                    .filter(r => r.trim() !== '')
+                    .map((row, index): MarketListing | null => {
+                        const cols = parseCSVLine(row);
+                        // Mapping based on Food Sheet structure:
+                        // 0:mon_an, 1:anh_mon_an, 2:gia_tien, 3:mo_ta, 4:phan_loai, 5:ten_quan, 6:dia_chi, 7:sdt_zalo, 8:trang_thai
+                        
+                        // Simple helper to get column safely
+                        const getCol = (i: number) => (cols[i] || "").trim();
+
+                        if (getCol(8).toLowerCase() === 'het') return null; // Skip sold out items on homepage
+
+                        return {
+                            id: `food-${index}`,
+                            title: getCol(0) || "Món ngon chưa đặt tên",
+                            image: getCol(1) || "https://placehold.co/600x400?text=Food",
+                            price: getCol(2) ? `${parseInt(getCol(2).replace(/\D/g, '')).toLocaleString('vi-VN')} đ` : "Liên hệ",
+                            seller: getCol(5) || "Cửa hàng",
+                            location: getCol(6) || "Thạnh Lợi",
+                            category: "Ẩm Thực",
+                            phone: getCol(7),
+                            isAd: false,
+                            timestamp: Date.now() + index // Mock timestamp to keep order
+                        };
+                    })
+                    .filter((item): item is MarketListing => item !== null)
+                    .slice(0, 8); // Take top 8 latest food items
+                
+                allNewListings = [...allNewListings, ...foodItems];
+            } catch (error) {
+                console.error("Error fetching food sheet:", error);
+            }
+        }
+
+        // 2. Fetch Services/Jobs/RealEstate (If URLs provided)
+        // Future implementation: Add similar blocks here for other SHEET_URLS
+        
+        // 3. Merge with Static Data
+        // Combine fetched data with static data (for categories that don't have sheets yet)
+        const combined = [...allNewListings, ...STATIC_LISTINGS];
+        
+        // 4. Shuffle/Sort Logic (Optional: Here we just put new fetched items first)
+        // In a real app with 'created_at' in CSV, we would sort by date.
+        
+        setListings(combined);
+        setIsLoading(false);
+    };
+
+    fetchAllData();
+  }, []);
 
   const handleCategoryClick = (catName: string) => {
     if (catName === "Ẩm Thực" && onOpenFood) {
@@ -112,6 +205,11 @@ const ThanhLoiMarketPage: React.FC<ThanhLoiMarketPageProps> = ({
         onOpenRealEstate();
     }
   };
+
+  const filteredListings = listings.filter(item => 
+    item.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    item.seller.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   return (
     <div className="bg-gray-50 min-h-screen font-sans text-gray-900">
@@ -159,7 +257,7 @@ const ThanhLoiMarketPage: React.FC<ThanhLoiMarketPageProps> = ({
                 <input 
                     type="text" 
                     placeholder="Bạn đang tìm gì hôm nay? (Ví dụ: Gà ta, Thợ hồ...)"
-                    className="w-full pl-12 pr-4 py-4 rounded-full border border-gray-300 shadow-lg focus:outline-none focus:ring-2 focus:ring-green-500 bg-white text-gray-900"
+                    className="w-full pl-12 pr-4 py-4 rounded-full border border-gray-300 shadow-lg focus:outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500 bg-white text-gray-900"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                 />
@@ -233,23 +331,35 @@ const ThanhLoiMarketPage: React.FC<ThanhLoiMarketPageProps> = ({
 
       {/* 5. LISTING GRID */}
       <section className="max-w-7xl mx-auto px-4 pb-20">
-        <h2 className="text-xl font-bold text-gray-900 mb-6">Tin đăng mới nhất</h2>
+        <div className="flex items-center justify-between mb-6">
+            <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+                Tin đăng mới nhất {isLoading && <RefreshCw className="animate-spin text-green-600" size={16} />}
+            </h2>
+        </div>
         
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-            {listings.map((item) => (
-                <div key={item.id} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-lg transition-shadow duration-300 group">
-                    <div className="relative h-48 overflow-hidden">
+            {filteredListings.map((item) => (
+                <div key={item.id} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-lg transition-shadow duration-300 group flex flex-col">
+                    <div className="relative h-48 overflow-hidden bg-gray-100">
                         <img 
                             src={item.image} 
                             alt={item.title} 
                             className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                            onError={(e) => {
+                                (e.target as HTMLImageElement).src = 'https://placehold.co/600x400?text=No+Image';
+                            }}
                         />
                         <span className="absolute top-2 left-2 bg-black/60 backdrop-blur-sm text-white text-[10px] font-bold px-2 py-1 rounded">
                             {item.category}
                         </span>
+                        {item.category === "Ẩm Thực" && (
+                            <span className="absolute bottom-2 right-2 bg-green-500 text-white text-[10px] font-bold px-2 py-1 rounded-full shadow-sm">
+                                Mới đăng
+                            </span>
+                        )}
                     </div>
-                    <div className="p-4">
-                        <h3 className="font-bold text-gray-900 mb-2 line-clamp-2 min-h-[48px] text-sm md:text-base">
+                    <div className="p-4 flex flex-col flex-grow">
+                        <h3 className="font-bold text-gray-900 mb-2 line-clamp-2 min-h-[48px] text-sm md:text-base leading-tight">
                             {item.title}
                         </h3>
                         <p className="text-red-600 font-extrabold text-lg mb-3">
@@ -257,24 +367,32 @@ const ThanhLoiMarketPage: React.FC<ThanhLoiMarketPageProps> = ({
                         </p>
                         
                         <div className="flex items-center gap-2 text-gray-500 text-xs mb-4">
-                            <MapPin size={14} /> {item.location}
+                            <MapPin size={14} className="flex-shrink-0" /> <span className="truncate">{item.location}</span>
                         </div>
                         
-                        <div className="flex items-center justify-between pt-4 border-t border-gray-100">
-                             <div className="flex items-center gap-2">
-                                <div className="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center text-xs font-bold text-gray-600">
+                        <div className="flex items-center justify-between pt-4 border-t border-gray-100 mt-auto">
+                             <div className="flex items-center gap-2 max-w-[50%]">
+                                <div className="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center text-xs font-bold text-gray-600 flex-shrink-0">
                                     {item.seller.charAt(0)}
                                 </div>
-                                <span className="text-xs font-semibold text-gray-700 truncate max-w-[80px]">{item.seller}</span>
+                                <span className="text-xs font-semibold text-gray-700 truncate">{item.seller}</span>
                              </div>
                              
                              <div className="flex gap-2">
-                                <button className="bg-blue-500 hover:bg-blue-600 text-white p-2 rounded-full transition-colors" title="Chat Zalo">
-                                    <MessageCircle size={16} />
-                                </button>
-                                <button className="bg-green-600 hover:bg-green-700 text-white p-2 rounded-full transition-colors" title="Gọi ngay">
-                                    <Phone size={16} />
-                                </button>
+                                {item.phone ? (
+                                    <>
+                                        <a href={`https://zalo.me/${item.phone}`} target="_blank" rel="noreferrer" className="bg-blue-500 hover:bg-blue-600 text-white p-2 rounded-full transition-colors" title="Chat Zalo">
+                                            <MessageCircle size={16} />
+                                        </a>
+                                        <a href={`tel:${item.phone}`} className="bg-green-600 hover:bg-green-700 text-white p-2 rounded-full transition-colors" title="Gọi ngay">
+                                            <Phone size={16} />
+                                        </a>
+                                    </>
+                                ) : (
+                                    <button className="bg-gray-300 text-gray-500 p-2 rounded-full cursor-not-allowed">
+                                        <Phone size={16} />
+                                    </button>
+                                )}
                              </div>
                         </div>
                     </div>
