@@ -23,6 +23,7 @@ import Footer from './Footer';
 interface ThanhLoiMarketPageProps {
   onBack: () => void;
   onOpenFood?: () => void;
+  onOpenServices?: () => void; // Added Prop
 }
 
 // Dữ liệu danh mục
@@ -89,12 +90,14 @@ const listings = [
   }
 ];
 
-const ThanhLoiMarketPage: React.FC<ThanhLoiMarketPageProps> = ({ onBack, onOpenFood }) => {
+const ThanhLoiMarketPage: React.FC<ThanhLoiMarketPageProps> = ({ onBack, onOpenFood, onOpenServices }) => {
   const [searchTerm, setSearchTerm] = useState("");
 
   const handleCategoryClick = (catName: string) => {
     if (catName === "Ẩm Thực" && onOpenFood) {
         onOpenFood();
+    } else if (catName === "Dịch Vụ" && onOpenServices) {
+        onOpenServices();
     }
   };
 
