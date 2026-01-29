@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Navbar from './components/Navbar';
 import Hero from './components/Hero';
 import About from './components/About';
@@ -16,6 +16,7 @@ import ThanhLoiMarketPage from './components/ThanhLoiMarketPage';
 import FoodBeveragePage from './components/FoodBeveragePage';
 import ServiceListingPage from './components/ServiceListingPage';
 import JobListingPage from './components/JobListingPage';
+import RealEstatePage from './components/RealEstatePage';
 
 const App: React.FC = () => {
   const [showMerch, setShowMerch] = useState(false);
@@ -27,8 +28,9 @@ const App: React.FC = () => {
   const [showFoodPage, setShowFoodPage] = useState(false);
   const [showServiceListing, setShowServiceListing] = useState(false);
   const [showJobListing, setShowJobListing] = useState(false);
+  const [showRealEstate, setShowRealEstate] = useState(false);
 
-  // Helper to handle view switching
+  // Helper function to turn off all views
   const resetAllViews = () => {
     setShowMerch(false);
     setShowServices(false);
@@ -39,67 +41,84 @@ const App: React.FC = () => {
     setShowFoodPage(false);
     setShowServiceListing(false);
     setShowJobListing(false);
+    setShowRealEstate(false);
   };
 
-  const handleOpenMerch = () => {
+  // Sync state with URL Hash
+  const syncViewFromHash = () => {
+    const hash = window.location.hash;
+    
+    // If hash is empty or a homepage section anchor, do nothing (stay on home)
+    // unless we are currently showing a page, then we should reset.
+    if (!hash || hash === '#home' || hash === '#about' || hash === '#ecosystem' || hash === '#vision' || hash === '#contact') {
+      resetAllViews();
+      return;
+    }
+
     resetAllViews();
-    setShowMerch(true);
+    
+    switch (hash) {
+      case '#store': setShowMerch(true); break;
+      case '#solutions': setShowServices(true); break;
+      case '#privacy': setShowPrivacy(true); break;
+      case '#blog': setShowBlog(true); break;
+      case '#projects': setShowAllProjects(true); break;
+      case '#market': setShowMarket(true); break;
+      case '#market-food': setShowFoodPage(true); break;
+      case '#market-services': setShowServiceListing(true); break;
+      case '#market-jobs': setShowJobListing(true); break;
+      case '#market-real-estate': setShowRealEstate(true); break;
+      default: break;
+    }
   };
 
-  const handleOpenServices = () => {
-    resetAllViews();
-    setShowServices(true);
-  };
+  // Setup listener for hash changes
+  useEffect(() => {
+    // Run on mount
+    syncViewFromHash();
 
-  const handleOpenPrivacy = () => {
-    resetAllViews();
-    setShowPrivacy(true);
-  }
+    // Run whenever the hash changes (e.g. user presses Back button)
+    window.addEventListener('hashchange', syncViewFromHash);
+    
+    return () => {
+      window.removeEventListener('hashchange', syncViewFromHash);
+    };
+  }, []);
 
-  const handleOpenBlog = () => {
-    resetAllViews();
-    setShowBlog(true);
-  }
+  // Updated Handlers: Now they just update the Hash
+  // The useEffect above will catch the change and update the State.
 
-  const handleOpenAllProjects = () => {
-    resetAllViews();
-    setShowAllProjects(true);
-  }
+  const handleOpenMerch = () => window.location.hash = 'store';
 
-  const handleOpenMarket = () => {
-    resetAllViews();
-    setShowMarket(true);
-  }
+  const handleOpenServices = () => window.location.hash = 'solutions';
 
-  const handleOpenFoodPage = () => {
-    resetAllViews();
-    setShowFoodPage(true);
-  }
+  const handleOpenPrivacy = () => window.location.hash = 'privacy';
 
-  const handleOpenServiceListing = () => {
-    resetAllViews();
-    setShowServiceListing(true);
-  }
+  const handleOpenBlog = () => window.location.hash = 'blog';
 
-  const handleOpenJobListing = () => {
-    resetAllViews();
-    setShowJobListing(true);
-  }
+  const handleOpenAllProjects = () => window.location.hash = 'projects';
 
+  const handleOpenMarket = () => window.location.hash = 'market';
+
+  const handleOpenFoodPage = () => window.location.hash = 'market-food';
+
+  const handleOpenServiceListing = () => window.location.hash = 'market-services';
+
+  const handleOpenJobListing = () => window.location.hash = 'market-jobs';
+
+  const handleOpenRealEstate = () => window.location.hash = 'market-real-estate';
+
+  // Back Handlers
   const handleBackToHome = () => {
-    resetAllViews();
+    // Use history.pushState to clear hash cleanly or just set to empty
+    window.history.pushState("", document.title, window.location.pathname + window.location.search);
+    // Manually trigger sync because pushState doesn't always trigger hashchange event
+    syncViewFromHash(); 
   };
 
-  // Navigations back
-  const handleBackToProjects = () => {
-    resetAllViews();
-    setShowAllProjects(true);
-  }
+  const handleBackToProjects = () => window.location.hash = 'projects';
 
-  const handleBackToMarket = () => {
-    resetAllViews();
-    setShowMarket(true);
-  }
+  const handleBackToMarket = () => window.location.hash = 'market';
 
   if (showMerch) {
     return <ProductShowcase onBack={handleBackToHome} />;
@@ -129,12 +148,17 @@ const App: React.FC = () => {
     return <JobListingPage onBack={handleBackToMarket} />;
   }
 
+  if (showRealEstate) {
+    return <RealEstatePage onBack={handleBackToMarket} />;
+  }
+
   if (showMarket) {
     return <ThanhLoiMarketPage 
         onBack={handleBackToProjects} 
         onOpenFood={handleOpenFoodPage}
         onOpenServices={handleOpenServiceListing}
         onOpenJobs={handleOpenJobListing}
+        onOpenRealEstate={handleOpenRealEstate}
     />;
   }
 
