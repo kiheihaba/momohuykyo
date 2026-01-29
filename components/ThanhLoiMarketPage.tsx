@@ -44,12 +44,11 @@ interface MarketListing {
 }
 
 // 1. CẤU HÌNH LINK GOOGLE SHEET (CSV)
-// Bạn có thể thêm link cho các danh mục khác vào đây
 const SHEET_URLS = {
     FOOD: "https://docs.google.com/spreadsheets/d/e/2PACX-1vRJrotBdzd-po6z_Zd6fbew0pqGgdDdZjRMf7vutpfJia2aFpNyTZNdvGZxN4MfcGtRwJWUrmICvZMF/pub?gid=0&single=true&output=csv",
-    SERVICES: "", // Điền Link CSV Sheet Dịch vụ vào đây
-    JOBS: "",     // Điền Link CSV Sheet Việc làm vào đây
-    REAL_ESTATE: "" // Điền Link CSV Sheet Nhà đất vào đây
+    SERVICES: "https://docs.google.com/spreadsheets/d/e/2PACX-1vRJrotBdzd-po6z_Zd6fbew0pqGgdDdZjRMf7vutpfJia2aFpNyTZNdvGZxN4MfcGtRwJWUrmICvZMF/pub?gid=987608880&single=true&output=csv", 
+    JOBS: "https://docs.google.com/spreadsheets/d/e/2PACX-1vRJrotBdzd-po6z_Zd6fbew0pqGgdDdZjRMf7vutpfJia2aFpNyTZNdvGZxN4MfcGtRwJWUrmICvZMF/pub?gid=1687973723&single=true&output=csv",     
+    REAL_ESTATE: "" 
 };
 
 // Dữ liệu danh mục
@@ -62,7 +61,7 @@ const categories = [
   { id: 6, name: "Bất động sản", icon: <Home size={24} />, color: "bg-purple-100 text-purple-600" },
 ];
 
-// Dữ liệu tin đăng mẫu (Fallback khi chưa có Sheet hoặc đang tải)
+// Dữ liệu tin đăng mẫu (Fallback)
 const STATIC_LISTINGS: MarketListing[] = [
   {
     id: "s1",
@@ -76,17 +75,6 @@ const STATIC_LISTINGS: MarketListing[] = [
     timestamp: 1
   },
   {
-    id: "s2",
-    title: "Tuyển 5 thợ hồ làm công trình nhà ở",
-    price: "500.000 đ/ngày",
-    seller: "Cai Thầu Năm",
-    location: "Khu dân cư 135",
-    image: "https://images.unsplash.com/photo-1504307651254-35680f356dfd?auto=format&fit=crop&q=80&w=600",
-    category: "Việc Làm",
-    isAd: false,
-    timestamp: 2
-  },
-  {
     id: "s3",
     title: "Đất thổ cư 100m2 gần UBND xã",
     price: "850 triệu",
@@ -96,17 +84,6 @@ const STATIC_LISTINGS: MarketListing[] = [
     category: "Bất động sản",
     isAd: false,
     timestamp: 3
-  },
-  {
-      id: "s4",
-      title: "Sửa chữa điện nước tại nhà 24/7",
-      price: "Thương lượng",
-      seller: "Điện lạnh Minh Tuấn",
-      location: "Phục vụ toàn xã",
-      image: "https://images.unsplash.com/photo-1621905251189-08b45d6a269e?auto=format&fit=crop&q=80&w=600",
-      category: "Dịch Vụ",
-      isAd: false,
-      timestamp: 4
   }
 ];
 
@@ -121,7 +98,7 @@ const ThanhLoiMarketPage: React.FC<ThanhLoiMarketPageProps> = ({
   const [listings, setListings] = useState<MarketListing[]>(STATIC_LISTINGS);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Helper: Parse CSV Line safely
+  // Helper: Parse CSV Line safely (Regex handles commas inside quotes)
   const parseCSVLine = (line: string): string[] => {
       const parts = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
       return parts.map(part => {
@@ -140,52 +117,151 @@ const ThanhLoiMarketPage: React.FC<ThanhLoiMarketPageProps> = ({
         if (SHEET_URLS.FOOD) {
             try {
                 const response = await fetch(SHEET_URLS.FOOD);
-                const text = await response.text();
-                const rows = text.split('\n').slice(1); // Skip header
+                if (response.ok) {
+                    const text = await response.text();
+                    const rows = text.split('\n');
+                    if (rows.length > 1) {
+                        const headers = parseCSVLine(rows[0]);
+                        const getIndex = (key: string) => headers.findIndex(h => h.toLowerCase().trim() === key.toLowerCase().trim());
 
-                const foodItems: MarketListing[] = rows
-                    .filter(r => r.trim() !== '')
-                    .map((row, index): MarketListing | null => {
-                        const cols = parseCSVLine(row);
-                        // Mapping based on Food Sheet structure:
-                        // 0:mon_an, 1:anh_mon_an, 2:gia_tien, 3:mo_ta, 4:phan_loai, 5:ten_quan, 6:dia_chi, 7:sdt_zalo, 8:trang_thai
+                        const idxName = getIndex('mon_an');
+                        const idxImage = getIndex('anh_mon_an');
+                        const idxPrice = getIndex('gia_tien');
+                        const idxShop = getIndex('ten_quan');
+                        const idxPhone = getIndex('sdt_zalo');
+                        const idxStatus = getIndex('trang_thai');
+                        const idxAddress = getIndex('dia_chi');
+
+                        const foodItems: MarketListing[] = rows.slice(1)
+                            .filter(r => r.trim() !== '')
+                            .map((row, index): MarketListing | null => {
+                                const cols = parseCSVLine(row);
+                                const getCol = (idx: number) => (idx !== -1 && cols[idx] ? cols[idx].trim() : "");
+                                
+                                if (getCol(idxStatus).toLowerCase() === 'het') return null;
+
+                                const rawPrice = getCol(idxPrice);
+                                const priceNum = parseInt(rawPrice.replace(/\D/g, ''));
+                                const displayPrice = isNaN(priceNum) || priceNum === 0 ? "Liên hệ" : `${priceNum.toLocaleString('vi-VN')} đ`;
+
+                                return {
+                                    id: `food-${index}`,
+                                    title: getCol(idxName) || "Món ngon",
+                                    image: getCol(idxImage) || "https://placehold.co/600x400?text=Food",
+                                    price: displayPrice,
+                                    seller: getCol(idxShop) || "Cửa hàng",
+                                    location: getCol(idxAddress) || "Thạnh Lợi",
+                                    category: "Ẩm Thực",
+                                    phone: getCol(idxPhone),
+                                    isAd: false,
+                                    timestamp: Date.now() + index
+                                };
+                            })
+                            .filter((item): item is MarketListing => item !== null)
+                            .slice(0, 5); // Top 5 Food
                         
-                        // Simple helper to get column safely
-                        const getCol = (i: number) => (cols[i] || "").trim();
-
-                        if (getCol(8).toLowerCase() === 'het') return null; // Skip sold out items on homepage
-
-                        return {
-                            id: `food-${index}`,
-                            title: getCol(0) || "Món ngon chưa đặt tên",
-                            image: getCol(1) || "https://placehold.co/600x400?text=Food",
-                            price: getCol(2) ? `${parseInt(getCol(2).replace(/\D/g, '')).toLocaleString('vi-VN')} đ` : "Liên hệ",
-                            seller: getCol(5) || "Cửa hàng",
-                            location: getCol(6) || "Thạnh Lợi",
-                            category: "Ẩm Thực",
-                            phone: getCol(7),
-                            isAd: false,
-                            timestamp: Date.now() + index // Mock timestamp to keep order
-                        };
-                    })
-                    .filter((item): item is MarketListing => item !== null)
-                    .slice(0, 8); // Take top 8 latest food items
-                
-                allNewListings = [...allNewListings, ...foodItems];
+                        allNewListings = [...allNewListings, ...foodItems];
+                    }
+                }
             } catch (error) {
                 console.error("Error fetching food sheet:", error);
             }
         }
 
-        // 2. Fetch Services/Jobs/RealEstate (If URLs provided)
-        // Future implementation: Add similar blocks here for other SHEET_URLS
+        // 2. Fetch Services Data
+        if (SHEET_URLS.SERVICES) {
+            try {
+                const response = await fetch(SHEET_URLS.SERVICES);
+                if (response.ok) {
+                    const text = await response.text();
+                    const rows = text.split('\n');
+                    if (rows.length > 1) {
+                        const headers = parseCSVLine(rows[0]);
+                        const getIndex = (key: string) => headers.findIndex(h => h.toLowerCase().trim() === key.toLowerCase().trim());
+                        
+                        const idxCategory = getIndex('loai_dich_vu');
+                        const idxName = getIndex('ten_tho');
+                        const idxLocation = getIndex('dia_chi');
+                        const idxPhone = getIndex('sdt');
+                        const idxImage = getIndex('anh_dai_dien');
+
+                        const serviceItems: MarketListing[] = rows.slice(1)
+                            .filter(r => r.trim() !== '')
+                            .map((row, index): MarketListing => {
+                                const cols = parseCSVLine(row);
+                                const getCol = (idx: number) => (idx !== -1 && cols[idx] ? cols[idx].trim() : "");
+
+                                return {
+                                    id: `service-${index}`,
+                                    title: getCol(idxName) || "Dịch vụ",
+                                    image: getCol(idxImage) || "https://placehold.co/600x400?text=Dịch+Vụ",
+                                    price: "Liên hệ", 
+                                    seller: getCol(idxCategory) || "Thợ lành nghề",
+                                    location: getCol(idxLocation) || "Thạnh Lợi",
+                                    category: "Dịch Vụ",
+                                    phone: getCol(idxPhone),
+                                    isAd: false,
+                                    timestamp: Date.now() + index + 100
+                                };
+                            })
+                            .slice(0, 4); // Top 4 Services
+
+                         allNewListings = [...allNewListings, ...serviceItems];
+                    }
+                }
+            } catch (error) {
+                console.error("Error fetching services sheet:", error);
+            }
+        }
+
+        // 3. Fetch Jobs Data (NEW)
+        if (SHEET_URLS.JOBS) {
+            try {
+                const response = await fetch(SHEET_URLS.JOBS);
+                if (response.ok) {
+                    const text = await response.text();
+                    const rows = text.split('\n');
+                    if (rows.length > 1) {
+                        const headers = parseCSVLine(rows[0]);
+                        const getIndex = (key: string) => headers.findIndex(h => h.toLowerCase().trim() === key.toLowerCase().trim());
+                        
+                        const idxTitle = getIndex('cong_viec');
+                        const idxSalary = getIndex('muc_luong');
+                        const idxEmployer = getIndex('nguoi_tuyen');
+                        const idxLocation = getIndex('dia_chi');
+                        const idxPhone = getIndex('sdt');
+
+                        const jobItems: MarketListing[] = rows.slice(1)
+                            .filter(r => r.trim() !== '')
+                            .map((row, index): MarketListing => {
+                                const cols = parseCSVLine(row);
+                                const getCol = (idx: number) => (idx !== -1 && cols[idx] ? cols[idx].trim() : "");
+
+                                return {
+                                    id: `job-${index}`,
+                                    title: getCol(idxTitle) || "Việc làm",
+                                    image: "https://images.unsplash.com/photo-1504307651254-35680f356dfd?auto=format&fit=crop&q=80&w=600", // Generic Job Image
+                                    price: getCol(idxSalary) || "Thỏa thuận",
+                                    seller: getCol(idxEmployer) || "Tuyển dụng",
+                                    location: getCol(idxLocation) || "Thạnh Lợi",
+                                    category: "Việc Làm",
+                                    phone: getCol(idxPhone),
+                                    isAd: false,
+                                    timestamp: Date.now() + index + 200
+                                };
+                            })
+                            .slice(0, 4); // Top 4 Jobs
+
+                         allNewListings = [...allNewListings, ...jobItems];
+                    }
+                }
+            } catch (error) {
+                console.error("Error fetching jobs sheet:", error);
+            }
+        }
         
-        // 3. Merge with Static Data
-        // Combine fetched data with static data (for categories that don't have sheets yet)
+        // 4. Merge with Static Data
         const combined = [...allNewListings, ...STATIC_LISTINGS];
-        
-        // 4. Shuffle/Sort Logic (Optional: Here we just put new fetched items first)
-        // In a real app with 'created_at' in CSV, we would sort by date.
         
         setListings(combined);
         setIsLoading(false);
@@ -237,7 +313,7 @@ const ThanhLoiMarketPage: React.FC<ThanhLoiMarketPageProps> = ({
          </button>
       </div>
 
-      {/* 2. HERO SECTION (Light Mode) */}
+      {/* 2. HERO SECTION */}
       <section className="relative bg-white border-b border-gray-200">
         <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-5"></div>
         <div className="max-w-7xl mx-auto px-4 py-12 md:py-16 text-center relative z-10">
@@ -294,7 +370,7 @@ const ThanhLoiMarketPage: React.FC<ThanhLoiMarketPageProps> = ({
         </div>
       </section>
 
-      {/* 4. MOMO X HUYKYO AD BANNER (Interspersed) */}
+      {/* 4. AD BANNER */}
       <section className="max-w-7xl mx-auto px-4 mb-10">
         <div className="bg-[#121212] rounded-2xl overflow-hidden relative flex flex-col md:flex-row items-center border border-gray-800">
             <div className="absolute top-0 right-0 w-64 h-64 bg-brand-cyan/20 blur-[80px] rounded-full pointer-events-none"></div>
@@ -352,7 +428,7 @@ const ThanhLoiMarketPage: React.FC<ThanhLoiMarketPageProps> = ({
                         <span className="absolute top-2 left-2 bg-black/60 backdrop-blur-sm text-white text-[10px] font-bold px-2 py-1 rounded">
                             {item.category}
                         </span>
-                        {item.category === "Ẩm Thực" && (
+                        {(item.category === "Ẩm Thực" || item.category === "Dịch Vụ" || item.category === "Việc Làm") && (
                             <span className="absolute bottom-2 right-2 bg-green-500 text-white text-[10px] font-bold px-2 py-1 rounded-full shadow-sm">
                                 Mới đăng
                             </span>
@@ -362,7 +438,7 @@ const ThanhLoiMarketPage: React.FC<ThanhLoiMarketPageProps> = ({
                         <h3 className="font-bold text-gray-900 mb-2 line-clamp-2 min-h-[48px] text-sm md:text-base leading-tight">
                             {item.title}
                         </h3>
-                        <p className="text-red-600 font-extrabold text-lg mb-3">
+                        <p className={`font-extrabold text-lg mb-3 ${item.price === "Liên hệ" || item.price === "Thỏa thuận" ? 'text-blue-600' : 'text-red-600'}`}>
                             {item.price}
                         </p>
                         
@@ -372,7 +448,7 @@ const ThanhLoiMarketPage: React.FC<ThanhLoiMarketPageProps> = ({
                         
                         <div className="flex items-center justify-between pt-4 border-t border-gray-100 mt-auto">
                              <div className="flex items-center gap-2 max-w-[50%]">
-                                <div className="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center text-xs font-bold text-gray-600 flex-shrink-0">
+                                <div className="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center text-xs font-bold text-gray-600 flex-shrink-0 uppercase">
                                     {item.seller.charAt(0)}
                                 </div>
                                 <span className="text-xs font-semibold text-gray-700 truncate">{item.seller}</span>
@@ -407,7 +483,7 @@ const ThanhLoiMarketPage: React.FC<ThanhLoiMarketPageProps> = ({
         </div>
       </section>
 
-      {/* Footer (Reusing the Dark Footer style for consistency) */}
+      {/* Footer */}
       <Footer />
     </div>
   );
