@@ -16,7 +16,8 @@ import {
   Plus,
   MonitorPlay,
   RefreshCw,
-  AlertCircle
+  AlertCircle,
+  Megaphone
 } from 'lucide-react';
 
 interface JobListingPageProps {
@@ -25,15 +26,15 @@ interface JobListingPageProps {
 
 interface JobItem {
   id: string;
-  title: string; // cong_viec
-  salary: string; // muc_luong
-  employer: string; // nguoi_tuyen
-  location: string; // dia_chi
+  title: string;       // tieu_de
+  salary: string;      // muc_luong
+  employer: string;    // nguoi_tuyen
+  location: string;    // dia_diem
   requirement: string; // yeu_cau
-  postedTime: string; // ngay_dang
-  category: string; // phan_loai
-  phone: string; // sdt
-  isUrgent: boolean; // trang_thai (Gap / Thuong)
+  postedTime: string;  // ngay_dang (hoặc auto generated)
+  category: string;    // phan_loai (optional)
+  phone: string;       // sdt_lien_he
+  isUrgent: boolean;   // loai_tin == 'Gap'
 }
 
 // Link CSV Google Sheet Việc Làm
@@ -55,6 +56,66 @@ const JobListingPage: React.FC<JobListingPageProps> = ({ onBack }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Hàm Parser CSV mạnh mẽ (tương tự PapaParse logic)
+  const parseCSV = (text: string): JobItem[] => {
+    const rows = text.split('\n');
+    
+    // Regex split by comma ignoring quotes
+    const parseLine = (line: string): string[] => {
+        const parts = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
+        return parts.map(part => {
+            let p = part.trim();
+            if (p.startsWith('"') && p.endsWith('"')) p = p.slice(1, -1);
+            return p.replace(/""/g, '"');
+        });
+    };
+
+    if (rows.length < 2) return [];
+
+    // 1. Detect Headers
+    const headers = parseLine(rows[0]);
+    const getIndex = (key: string) => headers.findIndex(h => h.toLowerCase().trim() === key.toLowerCase().trim());
+
+    // 2. Map Columns (Ánh xạ theo yêu cầu của bạn)
+    // Ưu tiên tên cột mới, fallback về tên cũ để an toàn
+    const idxTitle = getIndex('tieu_de') !== -1 ? getIndex('tieu_de') : getIndex('cong_viec');
+    const idxSalary = getIndex('muc_luong');
+    const idxEmployer = getIndex('nguoi_tuyen');
+    const idxLocation = getIndex('dia_diem') !== -1 ? getIndex('dia_diem') : getIndex('dia_chi');
+    const idxRequirement = getIndex('yeu_cau');
+    const idxPhone = getIndex('sdt_lien_he') !== -1 ? getIndex('sdt_lien_he') : getIndex('sdt');
+    const idxType = getIndex('loai_tin') !== -1 ? getIndex('loai_tin') : getIndex('trang_thai'); // Gap vs Thuong
+    const idxCategory = getIndex('phan_loai'); // Optional
+
+    // 3. Parse Data
+    const parsedData = rows.slice(1)
+        .filter(r => r.trim() !== '')
+        .map((row, index) => {
+            const cols = parseLine(row);
+            const getCol = (i: number) => (i !== -1 && cols[i]) ? cols[i].trim() : "";
+
+            const typeVal = getCol(idxType).toLowerCase();
+            // Logic: Nếu loai_tin chứa 'gap' -> isUrgent = true
+            const isUrgent = typeVal.includes('gap') || typeVal.includes('hot');
+
+            return {
+                id: `job-${index}`,
+                title: getCol(idxTitle) || "Công việc mới",
+                salary: getCol(idxSalary) || "Thỏa thuận",
+                employer: getCol(idxEmployer) || "Người tuyển dụng",
+                location: getCol(idxLocation) || "Thạnh Lợi",
+                requirement: getCol(idxRequirement) || "Vui lòng liên hệ để biết chi tiết",
+                postedTime: "Mới đăng", 
+                category: getCol(idxCategory) || "Khác",
+                phone: getCol(idxPhone),
+                isUrgent: isUrgent
+            };
+        });
+
+    // 4. Sort: Urgent jobs first
+    return parsedData.sort((a, b) => (a.isUrgent === b.isUrgent) ? 0 : a.isUrgent ? -1 : 1);
+  };
+
   useEffect(() => {
     const fetchJobs = async () => {
       setIsLoading(true);
@@ -62,59 +123,8 @@ const JobListingPage: React.FC<JobListingPageProps> = ({ onBack }) => {
         const response = await fetch(SHEET_URL);
         if (!response.ok) throw new Error("Failed to fetch jobs");
         const text = await response.text();
-        const rows = text.split('\n');
-
-        if (rows.length > 1) {
-             // Helper: Parse CSV Line safely
-            const parseLine = (line: string): string[] => {
-                const parts = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
-                return parts.map(part => {
-                    let p = part.trim();
-                    if (p.startsWith('"') && p.endsWith('"')) p = p.slice(1, -1);
-                    return p.replace(/""/g, '"');
-                });
-            };
-
-            // Detect Headers
-            const headers = parseLine(rows[0]);
-            const getIndex = (key: string) => headers.findIndex(h => h.toLowerCase().trim() === key.toLowerCase().trim());
-
-            // Map columns dynamically
-            const idxTitle = getIndex('cong_viec');
-            const idxSalary = getIndex('muc_luong');
-            const idxEmployer = getIndex('nguoi_tuyen');
-            const idxLocation = getIndex('dia_chi');
-            const idxRequirement = getIndex('yeu_cau');
-            const idxDate = getIndex('ngay_dang');
-            const idxCategory = getIndex('phan_loai');
-            const idxPhone = getIndex('sdt');
-            const idxStatus = getIndex('trang_thai');
-
-            const parsedJobs = rows.slice(1)
-                .filter(r => r.trim() !== '')
-                .map((row, index) => {
-                    const cols = parseLine(row);
-                    const getCol = (i: number) => (i !== -1 && cols[i]) ? cols[i] : "";
-
-                    const status = getCol(idxStatus).toLowerCase();
-                    const isUrgent = status.includes('gap') || status.includes('hot');
-
-                    return {
-                        id: `job-${index}`,
-                        title: getCol(idxTitle) || "Công việc chưa đặt tên",
-                        salary: getCol(idxSalary) || "Thỏa thuận",
-                        employer: getCol(idxEmployer) || "Người tuyển dụng",
-                        location: getCol(idxLocation) || "Thạnh Lợi",
-                        requirement: getCol(idxRequirement) || "Liên hệ để biết thêm chi tiết",
-                        postedTime: getCol(idxDate) || "Mới đăng",
-                        category: getCol(idxCategory) || "Khác",
-                        phone: getCol(idxPhone),
-                        isUrgent: isUrgent
-                    };
-                });
-            
-            setJobs(parsedJobs);
-        }
+        const data = parseCSV(text);
+        setJobs(data);
       } catch (err) {
         console.error("Error loading jobs:", err);
         setError("Không thể tải danh sách việc làm.");
@@ -192,7 +202,7 @@ const JobListingPage: React.FC<JobListingPageProps> = ({ onBack }) => {
         {isLoading && (
             <div className="flex flex-col items-center justify-center py-10 text-gray-400">
                 <RefreshCw className="animate-spin mb-2 text-green-600" size={24} />
-                <p>Đang tải danh sách việc làm...</p>
+                <p>Đang cập nhật việc làm...</p>
             </div>
         )}
 
@@ -212,27 +222,23 @@ const JobListingPage: React.FC<JobListingPageProps> = ({ onBack }) => {
         {!isLoading && !error && filteredJobs.map((job, index) => (
             <React.Fragment key={job.id}>
                 
-                {/* INTERNAL AD BANNER (Position 3 -> Index 2) */}
-                {index === 2 && (
+                {/* Internal Ad Banner for Tech Courses (Interspersed) */}
+                {index === 3 && (
                     <motion.div 
-                        initial={{ opacity: 0, y: 20 }}
-                        whileInView={{ opacity: 1, y: 0 }}
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        whileInView={{ opacity: 1, scale: 1 }}
                         viewport={{ once: true }}
-                        className="bg-gradient-to-r from-[#121212] to-[#2a2a2a] rounded-xl p-5 border border-gray-800 text-white relative overflow-hidden shadow-xl my-6"
+                        className="bg-[#121212] rounded-xl p-5 border border-gray-800 text-white relative overflow-hidden shadow-xl my-6"
                     >
-                        <div className="absolute top-0 right-0 w-32 h-32 bg-brand-cyan/20 blur-[40px] rounded-full"></div>
-                        <div className="relative z-10">
-                            <span className="bg-yellow-400 text-black text-[10px] font-black px-2 py-0.5 rounded uppercase mb-2 inline-block">Cơ hội đổi đời</span>
-                            <h3 className="font-black text-lg uppercase leading-tight mb-2">
-                                Muốn việc nhẹ <br/> <span className="text-brand-cyan">Lương Cao?</span>
-                            </h3>
-                            <p className="text-gray-300 text-xs mb-4 max-w-[80%]">
-                                Học nghề Content Creator & Edit Video cùng HuyKyo. Làm việc tại nhà, thu nhập không giới hạn.
-                            </p>
-                            <button className="bg-white text-black text-xs font-bold px-4 py-2.5 rounded-lg flex items-center gap-1 hover:bg-brand-cyan transition-colors">
-                                <MonitorPlay size={14} /> Xem khóa học
-                            </button>
-                        </div>
+                         <div className="absolute inset-0 bg-gradient-to-r from-purple-900/50 to-transparent"></div>
+                         <div className="relative z-10 flex flex-col items-start">
+                             <span className="bg-brand-cyan text-black font-bold text-[10px] px-2 py-0.5 uppercase mb-2">Đào tạo nghề</span>
+                             <h3 className="font-bold text-lg mb-1">Học AI & Edit Video</h3>
+                             <p className="text-gray-400 text-xs mb-3">Làm việc online tại nhà, thu nhập không giới hạn.</p>
+                             <button className="bg-white text-black text-xs font-bold px-4 py-2 rounded hover:bg-brand-cyan transition-colors">
+                                 Xem khóa học
+                             </button>
+                         </div>
                     </motion.div>
                 )}
 
@@ -241,56 +247,72 @@ const JobListingPage: React.FC<JobListingPageProps> = ({ onBack }) => {
                     initial={{ opacity: 0, y: 10 }}
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true }}
-                    className="bg-white rounded-xl p-4 shadow-sm border border-gray-200 relative"
+                    className={`bg-white rounded-xl p-4 shadow-sm border relative overflow-hidden ${
+                        job.isUrgent ? 'border-red-200 shadow-red-100 ring-1 ring-red-100' : 'border-gray-200'
+                    }`}
                 >
-                    {/* Urgent Badge */}
+                    {/* Badge Tuyển Gấp (Conditional Rendering) */}
                     {job.isUrgent && (
                         <div className="absolute top-0 right-0">
-                            <span className="flex h-6 w-6 relative">
-                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                                <span className="relative inline-flex rounded-full h-6 w-6 bg-red-500 items-center justify-center">
-                                    <Zap size={12} className="text-white fill-white" />
-                                </span>
-                            </span>
-                            <span className="absolute top-1 right-8 text-[10px] font-black text-red-600 uppercase tracking-tighter">Gấp</span>
+                            <div className="bg-red-600 text-white text-[10px] font-black px-3 py-1 rounded-bl-xl shadow-sm flex items-center gap-1 animate-pulse">
+                                <Megaphone size={10} fill="currentColor" /> TUYỂN GẤP
+                            </div>
                         </div>
                     )}
 
-                    {/* Header */}
+                    {/* Header: Title & Salary */}
                     <div className="mb-3 pr-8">
-                        <h3 className="text-lg font-bold text-gray-900 leading-snug">{job.title}</h3>
-                        <p className="text-green-600 font-extrabold text-base mt-1">{job.salary}</p>
+                        {/* tieu_de mapped to h3 */}
+                        <h3 className="text-lg font-bold text-gray-900 leading-snug">
+                            {job.title}
+                        </h3>
+                        {/* muc_luong highlighted */}
+                        <p className="text-amber-600 font-extrabold text-lg mt-1 flex items-center gap-1">
+                            {job.salary}
+                        </p>
                     </div>
 
                     {/* Body Info */}
-                    <div className="space-y-2 mb-4">
-                        <div className="flex items-center gap-2 text-sm font-semibold text-gray-800">
-                            <div className="w-5 h-5 rounded-full bg-gray-200 flex items-center justify-center text-[10px] font-bold uppercase">
-                                {job.employer.charAt(0)}
+                    <div className="space-y-3 mb-5">
+                        {/* Employer & Location */}
+                        <div className="flex flex-col gap-1">
+                             <div className="flex items-center gap-2 text-sm font-bold text-gray-800">
+                                <div className="w-6 h-6 rounded-full bg-gray-100 flex items-center justify-center text-xs font-bold uppercase text-gray-500 border border-gray-200">
+                                    {job.employer.charAt(0)}
+                                </div>
+                                {job.employer}
                             </div>
-                            {job.employer}
+                            <div className="flex items-start gap-2 text-xs text-gray-500 ml-8">
+                                <MapPin size={12} className="mt-0.5 shrink-0" />
+                                {job.location}
+                            </div>
                         </div>
-                        <div className="flex items-start gap-2 text-xs text-gray-500">
-                            <MapPin size={14} className="mt-0.5 shrink-0" />
-                            {job.location}
-                        </div>
-                        <div className="flex items-start gap-2 text-xs text-gray-500 bg-gray-50 p-2 rounded-lg">
-                            <div className="mt-0.5 shrink-0 font-bold">Yêu cầu:</div>
-                            {job.requirement}
+
+                        {/* Requirement Box */}
+                        <div className="bg-gray-50 p-3 rounded-lg border border-gray-100">
+                            <div className="text-xs text-gray-400 font-bold uppercase mb-1 flex items-center gap-1">
+                                <Zap size={10} /> Yêu cầu
+                            </div>
+                            <p className="text-sm text-gray-700 leading-relaxed">
+                                {job.requirement}
+                            </p>
                         </div>
                     </div>
 
-                    {/* Footer & CTA */}
-                    <div className="flex items-center justify-between pt-3 border-t border-gray-100">
-                            <span className="text-[10px] text-gray-400 flex items-center gap-1">
-                            <Clock size={10} /> {job.postedTime}
-                            </span>
-                            <a 
+                    {/* Footer & CTA Button */}
+                    <div className="pt-2">
+                        {/* Nút GỌI XIN VIỆC - Full width */}
+                        <a 
                             href={`tel:${job.phone}`}
-                            className="bg-green-600 text-white px-6 py-2.5 rounded-lg text-sm font-bold uppercase shadow-lg shadow-green-200 hover:bg-green-500 active:scale-95 transition-all flex items-center gap-2"
-                            >
-                            <Phone size={16} fill="currentColor" /> Gọi Xin Việc
-                            </a>
+                            className="w-full bg-green-600 text-white py-3.5 rounded-xl text-sm font-bold uppercase shadow-lg shadow-green-200 hover:bg-green-500 active:scale-95 transition-all flex items-center justify-center gap-2"
+                        >
+                            <Phone size={18} fill="currentColor" /> GỌI XIN VIỆC NGAY
+                        </a>
+                        <div className="text-center mt-2">
+                             <span className="text-[10px] text-gray-400 flex items-center justify-center gap-1">
+                                <Clock size={10} /> Đăng: {job.postedTime}
+                            </span>
+                        </div>
                     </div>
                 </motion.div>
 

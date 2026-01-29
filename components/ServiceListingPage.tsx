@@ -13,11 +13,11 @@ import {
   Wheat,
   PartyPopper,
   Grid,
-  Star,
   UserPlus,
   Camera,
   RefreshCw,
-  AlertCircle
+  AlertCircle,
+  User
 } from 'lucide-react';
 
 interface ServiceListingPageProps {
@@ -34,7 +34,7 @@ interface ServiceItem {
   image: string; // anh_dai_dien
 }
 
-// URL Google Sheet CSV
+// URL Google Sheet CSV (Dịch vụ)
 const SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRJrotBdzd-po6z_Zd6fbew0pqGgdDdZjRMf7vutpfJia2aFpNyTZNdvGZxN4MfcGtRwJWUrmICvZMF/pub?gid=987608880&single=true&output=csv";
 
 // Danh mục dịch vụ với Icon tương ứng
@@ -42,7 +42,7 @@ const serviceCategories = [
   { id: "all", name: "Tất cả", icon: <Grid size={20} />, color: "bg-gray-100 text-gray-600" },
   { id: "Sửa chữa", name: "Sửa chữa", icon: <Wrench size={20} />, color: "bg-blue-100 text-blue-600" },
   { id: "Vận chuyển", name: "Vận chuyển", icon: <Truck size={20} />, color: "bg-orange-100 text-orange-600" },
-  { id: "Làm đẹp & Y tế", name: "Làm đẹp", icon: <Scissors size={20} />, color: "bg-pink-100 text-pink-600" },
+  { id: "Làm đẹp", name: "Làm đẹp", icon: <Scissors size={20} />, color: "bg-pink-100 text-pink-600" },
   { id: "Nông nghiệp", name: "Nông nghiệp", icon: <Wheat size={20} />, color: "bg-green-100 text-green-600" },
   { id: "Tiệc tùng", name: "Tiệc tùng", icon: <PartyPopper size={20} />, color: "bg-purple-100 text-purple-600" },
 ];
@@ -54,6 +54,62 @@ const ServiceListingPage: React.FC<ServiceListingPageProps> = ({ onBack }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Helper: Chuẩn hóa string để so sánh Header (xóa dấu, xóa khoảng trắng, lowercase)
+  // VD: "Tên thợ" -> "tentho", "ten_tho" -> "tentho"
+  const normalizeHeader = (str: string) => {
+    return str.toLowerCase()
+      .normalize("NFD").replace(/[\u0300-\u036f]/g, "") // Xóa dấu tiếng Việt
+      .replace(/[^a-z0-9]/g, ""); // Xóa ký tự đặc biệt (_, space)
+  };
+
+  const parseCSV = (text: string): ServiceItem[] => {
+    const rows = text.split('\n');
+    
+    // Regex tách CSV an toàn (bỏ qua dấu phẩy trong ngoặc kép)
+    const parseLine = (line: string): string[] => {
+        const parts = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
+        return parts.map(part => {
+            let p = part.trim();
+            if (p.startsWith('"') && p.endsWith('"')) p = p.slice(1, -1);
+            return p.replace(/""/g, '"');
+        });
+    };
+
+    if (rows.length < 2) return [];
+
+    // 1. Lấy Header và chuẩn hóa để tìm cột chính xác hơn
+    const headers = parseLine(rows[0]);
+    const getIndex = (keys: string[]) => {
+        return headers.findIndex(h => keys.includes(normalizeHeader(h)));
+    };
+
+    // 2. Tìm vị trí các cột (Flexible Matching)
+    const idxImage = getIndex(['anhdaidien', 'anh', 'avatar', 'hinh']);
+    const idxName = getIndex(['tentho', 'hoten', 'ten', 'name']);
+    const idxCategory = getIndex(['loaidichvu', 'nghanhnghe', 'loai', 'category']);
+    const idxDesc = getIndex(['motangan', 'mota', 'description', 'skill']);
+    const idxLocation = getIndex(['diachi', 'khuvuc', 'location', 'address']);
+    const idxPhone = getIndex(['sdt', 'dienthoai', 'phone', 'contact']);
+
+    // 3. Map dữ liệu
+    return rows.slice(1)
+        .filter(r => r.trim() !== '')
+        .map((row, index) => {
+            const cols = parseLine(row);
+            const getCol = (idx: number) => (idx !== -1 && cols[idx]) ? cols[idx].trim() : "";
+
+            return {
+                id: `service-${index}`,
+                category: getCol(idxCategory) || "Dịch vụ khác",
+                name: getCol(idxName) || "Thợ Thạnh Lợi",
+                description: getCol(idxDesc) || "Liên hệ để biết thêm chi tiết",
+                location: getCol(idxLocation) || "Thạnh Lợi",
+                phone: getCol(idxPhone),
+                image: getCol(idxImage), 
+            };
+        });
+  };
+
   useEffect(() => {
     const fetchData = async () => {
       setIsLoading(true);
@@ -61,52 +117,11 @@ const ServiceListingPage: React.FC<ServiceListingPageProps> = ({ onBack }) => {
         const response = await fetch(SHEET_URL);
         if (!response.ok) throw new Error("Failed to fetch CSV");
         const text = await response.text();
-        const rows = text.split('\n');
-
-        if (rows.length > 1) {
-             // Helper: Parse CSV Line safely
-            const parseLine = (line: string): string[] => {
-                const parts = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
-                return parts.map(part => {
-                    let p = part.trim();
-                    if (p.startsWith('"') && p.endsWith('"')) p = p.slice(1, -1);
-                    return p.replace(/""/g, '"');
-                });
-            };
-
-            // Detect Headers
-            const headers = parseLine(rows[0]);
-            const getIndex = (key: string) => headers.findIndex(h => h.toLowerCase().trim() === key.toLowerCase().trim());
-
-            // Map columns dynamically based on Sheet headers
-            const idxCategory = getIndex('loai_dich_vu');
-            const idxName = getIndex('ten_tho');
-            const idxDesc = getIndex('mo_ta_ngan');
-            const idxLocation = getIndex('dia_chi');
-            const idxPhone = getIndex('sdt');
-            const idxImage = getIndex('anh_dai_dien');
-
-            const parsedData = rows.slice(1)
-                .filter(r => r.trim() !== '')
-                .map((row, index) => {
-                    const cols = parseLine(row);
-                    const getCol = (i: number) => (i !== -1 && cols[i]) ? cols[i] : "";
-
-                    return {
-                        id: `service-${index}`,
-                        category: getCol(idxCategory) || "Khác",
-                        name: getCol(idxName) || "Thợ Thạnh Lợi",
-                        description: getCol(idxDesc) || "Liên hệ để biết thêm chi tiết",
-                        location: getCol(idxLocation) || "Thạnh Lợi",
-                        phone: getCol(idxPhone),
-                        image: getCol(idxImage) || "https://placehold.co/200x200/eee/999?text=Dịch+Vụ",
-                    };
-                });
-            setServices(parsedData);
-        }
+        const parsedData = parseCSV(text);
+        setServices(parsedData);
       } catch (err) {
         console.error("Error loading services:", err);
-        setError("Không thể tải dữ liệu dịch vụ.");
+        setError("Đang cập nhật danh sách dịch vụ...");
       } finally {
         setIsLoading(false);
       }
@@ -116,14 +131,14 @@ const ServiceListingPage: React.FC<ServiceListingPageProps> = ({ onBack }) => {
   }, []);
 
   const filteredServices = services.filter(item => {
-    const matchesCategory = activeCategory === "all" || item.category === activeCategory;
+    const matchesCategory = activeCategory === "all" || item.category === activeCategory || (activeCategory !== "all" && item.category.includes(activeCategory));
     const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
                           item.description.toLowerCase().includes(searchTerm.toLowerCase());
     return matchesCategory && matchesSearch;
   });
 
   return (
-    <div className="fixed inset-0 z-[60] bg-gray-50 overflow-y-auto overflow-x-hidden custom-scrollbar text-gray-900">
+    <div className="fixed inset-0 z-[60] bg-gray-50 overflow-y-auto overflow-x-hidden custom-scrollbar text-gray-900 font-sans">
       
       {/* 1. HEADER */}
       <div className="sticky top-0 z-50 bg-white border-b border-gray-200 px-4 h-16 flex items-center gap-4 shadow-sm">
@@ -134,8 +149,8 @@ const ServiceListingPage: React.FC<ServiceListingPageProps> = ({ onBack }) => {
           <ArrowLeft size={24} />
         </button>
         <div className="flex-1">
-            <h1 className="font-bold text-lg leading-none text-gray-900">Tiện ích Thạnh Lợi</h1>
-            <p className="text-xs text-gray-500">Tìm thợ, xe ôm, làm đẹp quanh đây</p>
+            <h1 className="font-bold text-lg leading-none text-gray-900">Dịch Vụ & Thợ</h1>
+            <p className="text-xs text-gray-500">Kết nối thợ giỏi tại địa phương</p>
         </div>
       </div>
 
@@ -184,7 +199,7 @@ const ServiceListingPage: React.FC<ServiceListingPageProps> = ({ onBack }) => {
         )}
 
         {error && (
-            <div className="flex flex-col items-center justify-center py-10 text-red-500">
+            <div className="flex flex-col items-center justify-center py-10 text-gray-500 bg-gray-100 rounded-xl">
                 <AlertCircle size={24} className="mb-2" />
                 <p>{error}</p>
             </div>
@@ -223,52 +238,77 @@ const ServiceListingPage: React.FC<ServiceListingPageProps> = ({ onBack }) => {
                     </motion.div>
                 )}
 
-                {/* SERVICE CARD */}
+                {/* SERVICE CARD (List View) */}
                 <motion.div
                     initial={{ opacity: 0, y: 10 }}
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true }}
-                    className="bg-white rounded-xl p-3 shadow-sm border border-gray-100 flex gap-3 items-start"
+                    className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 flex flex-col sm:flex-row gap-4 items-start relative overflow-hidden"
                 >
-                    {/* Left: Avatar */}
-                    <div className="w-20 h-20 flex-shrink-0 bg-gray-200 rounded-lg overflow-hidden">
-                        <img 
-                            src={item.image} 
-                            alt={item.name} 
-                            className="w-full h-full object-cover"
-                            onError={(e) => { (e.target as HTMLImageElement).src = "https://placehold.co/200x200/eee/999?text=IMG" }}
-                        />
-                    </div>
-
-                    {/* Middle: Info */}
-                    <div className="flex-1 min-w-0 flex flex-col justify-between h-full min-h-[80px]">
-                        <div>
-                            <h3 className="font-bold text-gray-900 text-base leading-tight truncate">{item.name}</h3>
-                            <div className="flex items-center gap-1 text-xs text-blue-600 font-medium mb-1 mt-0.5">
-                                <Star size={10} fill="currentColor" /> Uy tín - Thạnh Lợi
+                    {/* Header: Avatar + Basic Info */}
+                    <div className="flex items-start gap-3 w-full sm:w-auto">
+                         {/* Avatar - Logic hiển thị cải tiến */}
+                        <div className="w-16 h-16 flex-shrink-0 bg-gray-200 rounded-full overflow-hidden border-2 border-white shadow-sm relative">
+                            {item.image && item.image.length > 5 ? (
+                                <img 
+                                    src={item.image} 
+                                    alt={item.name} 
+                                    className="w-full h-full object-cover"
+                                    onError={(e) => { 
+                                        e.currentTarget.style.display = 'none';
+                                        // Show fallback sibling
+                                        e.currentTarget.parentElement?.querySelector('.fallback-icon')?.classList.remove('hidden');
+                                    }}
+                                />
+                            ) : null}
+                            
+                            {/* Fallback Icon / Initials */}
+                            <div className={`fallback-icon absolute inset-0 flex items-center justify-center bg-blue-100 text-blue-600 font-bold text-xl uppercase ${item.image && item.image.length > 5 ? 'hidden' : ''}`}>
+                                {item.name ? item.name.charAt(0) : <User size={24} />}
                             </div>
-                            <p className="text-gray-500 text-xs line-clamp-2 leading-relaxed">
-                                {item.description}
-                            </p>
                         </div>
-                        <div className="flex items-center gap-1 text-xs text-gray-400 mt-2">
-                            <MapPin size={12} /> {item.location}
+
+                        <div className="flex-1 min-w-0 sm:hidden">
+                             <div className="flex items-center gap-2 mb-1">
+                                <span className="bg-blue-100 text-blue-700 text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wide">
+                                    {item.category}
+                                </span>
+                             </div>
+                             <h3 className="font-bold text-gray-900 text-base leading-tight truncate">{item.name}</h3>
                         </div>
                     </div>
 
-                    {/* Right: Actions */}
-                    <div className="flex flex-col gap-2 justify-center h-full min-h-[80px]">
+                    {/* Content Body */}
+                    <div className="flex-1 w-full">
+                        <div className="hidden sm:flex items-center gap-2 mb-1">
+                            <span className="bg-blue-100 text-blue-700 text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wide">
+                                {item.category}
+                            </span>
+                        </div>
+                        <h3 className="hidden sm:block font-bold text-gray-900 text-lg mb-2">{item.name}</h3>
+                        
+                        <p className="text-gray-600 text-sm leading-relaxed mb-3 line-clamp-2">
+                            {item.description}
+                        </p>
+                        
+                        <div className="flex items-center gap-1 text-xs text-gray-500 bg-gray-50 px-2 py-1.5 rounded-lg w-fit">
+                            <MapPin size={12} className="text-red-500" /> {item.location}
+                        </div>
+                    </div>
+
+                    {/* Actions */}
+                    <div className="flex flex-row sm:flex-col gap-2 w-full sm:w-32 pt-2 sm:pt-0 border-t sm:border-t-0 border-gray-100 mt-2 sm:mt-0">
                         <a 
                             href={`tel:${item.phone}`}
-                            className="w-24 bg-green-600 text-white py-2 rounded-lg text-xs font-bold uppercase flex items-center justify-center gap-1 hover:bg-green-500 shadow-md shadow-green-200 active:scale-95 transition-all"
+                            className="flex-1 bg-green-600 text-white py-2.5 rounded-lg text-xs font-bold uppercase flex items-center justify-center gap-1 hover:bg-green-500 shadow-md shadow-green-200 active:scale-95 transition-all"
                         >
-                            <Phone size={14} /> Gọi ngay
+                            <Phone size={14} /> GỌI NGAY
                         </a>
                         <a 
                             href={`https://zalo.me/${item.phone}`}
                             target="_blank"
                             rel="noreferrer"
-                            className="w-24 bg-blue-600 text-white py-2 rounded-lg text-xs font-bold uppercase flex items-center justify-center gap-1 hover:bg-blue-500 shadow-md shadow-blue-200 active:scale-95 transition-all"
+                            className="flex-1 bg-blue-600 text-white py-2.5 rounded-lg text-xs font-bold uppercase flex items-center justify-center gap-1 hover:bg-blue-500 shadow-md shadow-blue-200 active:scale-95 transition-all"
                         >
                             <MessageCircle size={14} /> Chat Zalo
                         </a>

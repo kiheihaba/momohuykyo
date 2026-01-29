@@ -98,7 +98,14 @@ const ThanhLoiMarketPage: React.FC<ThanhLoiMarketPageProps> = ({
   const [listings, setListings] = useState<MarketListing[]>(STATIC_LISTINGS);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Helper: Parse CSV Line safely (Regex handles commas inside quotes)
+  // Helper: Normalize Header (giống bên ServiceListingPage)
+  const normalizeHeader = (str: string) => {
+    return str.toLowerCase()
+      .normalize("NFD").replace(/[\u0300-\u036f]/g, "") 
+      .replace(/[^a-z0-9]/g, "");
+  };
+
+  // Helper: Parse CSV Line safely
   const parseCSVLine = (line: string): string[] => {
       const parts = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
       return parts.map(part => {
@@ -122,15 +129,15 @@ const ThanhLoiMarketPage: React.FC<ThanhLoiMarketPageProps> = ({
                     const rows = text.split('\n');
                     if (rows.length > 1) {
                         const headers = parseCSVLine(rows[0]);
-                        const getIndex = (key: string) => headers.findIndex(h => h.toLowerCase().trim() === key.toLowerCase().trim());
+                        const getIndex = (keys: string[]) => headers.findIndex(h => keys.includes(normalizeHeader(h)));
 
-                        const idxName = getIndex('mon_an');
-                        const idxImage = getIndex('anh_mon_an');
-                        const idxPrice = getIndex('gia_tien');
-                        const idxShop = getIndex('ten_quan');
-                        const idxPhone = getIndex('sdt_zalo');
-                        const idxStatus = getIndex('trang_thai');
-                        const idxAddress = getIndex('dia_chi');
+                        const idxName = getIndex(['monan', 'tenmon']);
+                        const idxImage = getIndex(['anhmonan', 'hinhanh', 'image']);
+                        const idxPrice = getIndex(['giatien', 'gia']);
+                        const idxShop = getIndex(['tenquan', 'shop']);
+                        const idxPhone = getIndex(['sdtzalo', 'sdt']);
+                        const idxStatus = getIndex(['trangthai']);
+                        const idxAddress = getIndex(['diachi']);
 
                         const foodItems: MarketListing[] = rows.slice(1)
                             .filter(r => r.trim() !== '')
@@ -177,13 +184,13 @@ const ThanhLoiMarketPage: React.FC<ThanhLoiMarketPageProps> = ({
                     const rows = text.split('\n');
                     if (rows.length > 1) {
                         const headers = parseCSVLine(rows[0]);
-                        const getIndex = (key: string) => headers.findIndex(h => h.toLowerCase().trim() === key.toLowerCase().trim());
+                        const getIndex = (keys: string[]) => headers.findIndex(h => keys.includes(normalizeHeader(h)));
                         
-                        const idxCategory = getIndex('loai_dich_vu');
-                        const idxName = getIndex('ten_tho');
-                        const idxLocation = getIndex('dia_chi');
-                        const idxPhone = getIndex('sdt');
-                        const idxImage = getIndex('anh_dai_dien');
+                        const idxCategory = getIndex(['loaidichvu', 'nghanhnghe']);
+                        const idxName = getIndex(['tentho', 'hoten', 'ten']);
+                        const idxLocation = getIndex(['diachi']);
+                        const idxPhone = getIndex(['sdt']);
+                        const idxImage = getIndex(['anhdaidien', 'anh', 'avatar']);
 
                         const serviceItems: MarketListing[] = rows.slice(1)
                             .filter(r => r.trim() !== '')
@@ -193,8 +200,8 @@ const ThanhLoiMarketPage: React.FC<ThanhLoiMarketPageProps> = ({
 
                                 return {
                                     id: `service-${index}`,
-                                    title: getCol(idxName) || "Dịch vụ",
-                                    image: getCol(idxImage) || "https://placehold.co/600x400?text=Dịch+Vụ",
+                                    title: getCol(idxName) || "Dịch vụ", // Đảm bảo lấy đúng tên thợ
+                                    image: getCol(idxImage) || "", // Để rỗng nếu không có để UI xử lý fallback
                                     price: "Liên hệ", 
                                     seller: getCol(idxCategory) || "Thợ lành nghề",
                                     location: getCol(idxLocation) || "Thạnh Lợi",
@@ -223,13 +230,13 @@ const ThanhLoiMarketPage: React.FC<ThanhLoiMarketPageProps> = ({
                     const rows = text.split('\n');
                     if (rows.length > 1) {
                         const headers = parseCSVLine(rows[0]);
-                        const getIndex = (key: string) => headers.findIndex(h => h.toLowerCase().trim() === key.toLowerCase().trim());
+                        const getIndex = (keys: string[]) => headers.findIndex(h => keys.includes(normalizeHeader(h)));
                         
-                        const idxTitle = getIndex('cong_viec');
-                        const idxSalary = getIndex('muc_luong');
-                        const idxEmployer = getIndex('nguoi_tuyen');
-                        const idxLocation = getIndex('dia_chi');
-                        const idxPhone = getIndex('sdt');
+                        const idxTitle = getIndex(['congviec', 'tieude']);
+                        const idxSalary = getIndex(['mucluong', 'luong']);
+                        const idxEmployer = getIndex(['nguoituyen', 'nguoithue']);
+                        const idxLocation = getIndex(['diachi', 'diadiem']);
+                        const idxPhone = getIndex(['sdt', 'sdtlienhe']);
 
                         const jobItems: MarketListing[] = rows.slice(1)
                             .filter(r => r.trim() !== '')
@@ -417,14 +424,21 @@ const ThanhLoiMarketPage: React.FC<ThanhLoiMarketPageProps> = ({
             {filteredListings.map((item) => (
                 <div key={item.id} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-lg transition-shadow duration-300 group flex flex-col">
                     <div className="relative h-48 overflow-hidden bg-gray-100">
-                        <img 
-                            src={item.image} 
-                            alt={item.title} 
-                            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                            onError={(e) => {
-                                (e.target as HTMLImageElement).src = 'https://placehold.co/600x400?text=No+Image';
-                            }}
-                        />
+                        {item.image && item.image.length > 5 ? (
+                             <img 
+                                src={item.image} 
+                                alt={item.title} 
+                                className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                                onError={(e) => {
+                                    (e.target as HTMLImageElement).src = 'https://placehold.co/600x400?text=No+Image';
+                                }}
+                            />
+                        ) : (
+                             <div className="w-full h-full flex items-center justify-center bg-gray-200 text-gray-400 font-bold uppercase text-2xl">
+                                {item.title.charAt(0)}
+                             </div>
+                        )}
+                       
                         <span className="absolute top-2 left-2 bg-black/60 backdrop-blur-sm text-white text-[10px] font-bold px-2 py-1 rounded">
                             {item.category}
                         </span>
