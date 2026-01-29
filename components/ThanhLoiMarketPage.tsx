@@ -23,15 +23,16 @@ import Footer from './Footer';
 interface ThanhLoiMarketPageProps {
   onBack: () => void;
   onOpenFood?: () => void;
-  onOpenServices?: () => void; // Added Prop
+  onOpenServices?: () => void;
+  onOpenJobs?: () => void;
 }
 
 // Dữ liệu danh mục
 const categories = [
   { id: 1, name: "Ẩm Thực", icon: <Utensils size={24} />, color: "bg-orange-100 text-orange-600" },
   { id: 2, name: "Dịch Vụ", icon: <Wrench size={24} />, color: "bg-blue-100 text-blue-600" },
-  { id: 3, name: "Thời Trang", icon: <Shirt size={24} />, color: "bg-pink-100 text-pink-600" },
-  { id: 4, name: "Việc Làm", icon: <Briefcase size={24} />, color: "bg-green-100 text-green-600" },
+  { id: 3, name: "Việc Làm", icon: <Briefcase size={24} />, color: "bg-green-100 text-green-600" }, 
+  { id: 4, name: "Thời Trang", icon: <Shirt size={24} />, color: "bg-pink-100 text-pink-600" },
   { id: 5, name: "Xe Cộ", icon: <Car size={24} />, color: "bg-red-100 text-red-600" },
   { id: 6, name: "Bất động sản", icon: <Home size={24} />, color: "bg-purple-100 text-purple-600" },
 ];
@@ -90,7 +91,7 @@ const listings = [
   }
 ];
 
-const ThanhLoiMarketPage: React.FC<ThanhLoiMarketPageProps> = ({ onBack, onOpenFood, onOpenServices }) => {
+const ThanhLoiMarketPage: React.FC<ThanhLoiMarketPageProps> = ({ onBack, onOpenFood, onOpenServices, onOpenJobs }) => {
   const [searchTerm, setSearchTerm] = useState("");
 
   const handleCategoryClick = (catName: string) => {
@@ -98,6 +99,8 @@ const ThanhLoiMarketPage: React.FC<ThanhLoiMarketPageProps> = ({ onBack, onOpenF
         onOpenFood();
     } else if (catName === "Dịch Vụ" && onOpenServices) {
         onOpenServices();
+    } else if (catName === "Việc Làm" && onOpenJobs) {
+        onOpenJobs();
     }
   };
 

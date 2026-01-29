@@ -15,6 +15,7 @@ import AllProjectsPage from './components/AllProjectsPage';
 import ThanhLoiMarketPage from './components/ThanhLoiMarketPage';
 import FoodBeveragePage from './components/FoodBeveragePage';
 import ServiceListingPage from './components/ServiceListingPage';
+import JobListingPage from './components/JobListingPage';
 
 const App: React.FC = () => {
   const [showMerch, setShowMerch] = useState(false);
@@ -25,6 +26,7 @@ const App: React.FC = () => {
   const [showMarket, setShowMarket] = useState(false);
   const [showFoodPage, setShowFoodPage] = useState(false);
   const [showServiceListing, setShowServiceListing] = useState(false);
+  const [showJobListing, setShowJobListing] = useState(false);
 
   // Helper to handle view switching
   const resetAllViews = () => {
@@ -36,6 +38,7 @@ const App: React.FC = () => {
     setShowMarket(false);
     setShowFoodPage(false);
     setShowServiceListing(false);
+    setShowJobListing(false);
   };
 
   const handleOpenMerch = () => {
@@ -78,6 +81,11 @@ const App: React.FC = () => {
     setShowServiceListing(true);
   }
 
+  const handleOpenJobListing = () => {
+    resetAllViews();
+    setShowJobListing(true);
+  }
+
   const handleBackToHome = () => {
     resetAllViews();
   };
@@ -117,11 +125,16 @@ const App: React.FC = () => {
     return <ServiceListingPage onBack={handleBackToMarket} />;
   }
 
+  if (showJobListing) {
+    return <JobListingPage onBack={handleBackToMarket} />;
+  }
+
   if (showMarket) {
     return <ThanhLoiMarketPage 
         onBack={handleBackToProjects} 
         onOpenFood={handleOpenFoodPage}
         onOpenServices={handleOpenServiceListing}
+        onOpenJobs={handleOpenJobListing}
     />;
   }
 
