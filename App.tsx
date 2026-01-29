@@ -63,11 +63,12 @@ const App: React.FC = () => {
       case '#privacy': setShowPrivacy(true); break;
       case '#blog': setShowBlog(true); break;
       case '#projects': setShowAllProjects(true); break;
-      case '#market': setShowMarket(true); break;
-      case '#market-food': setShowFoodPage(true); break;
-      case '#market-services': setShowServiceListing(true); break;
-      case '#market-jobs': setShowJobListing(true); break;
-      case '#market-real-estate': setShowRealEstate(true); break;
+      // Updated routes from #market to #thanhloiquetoi
+      case '#thanhloiquetoi': setShowMarket(true); break;
+      case '#thanhloiquetoi-food': setShowFoodPage(true); break;
+      case '#thanhloiquetoi-services': setShowServiceListing(true); break;
+      case '#thanhloiquetoi-jobs': setShowJobListing(true); break;
+      case '#thanhloiquetoi-real-estate': setShowRealEstate(true); break;
       default: break;
     }
   };
@@ -98,15 +99,15 @@ const App: React.FC = () => {
 
   const handleOpenAllProjects = () => window.location.hash = 'projects';
 
-  const handleOpenMarket = () => window.location.hash = 'market';
+  const handleOpenMarket = () => window.location.hash = 'thanhloiquetoi';
 
-  const handleOpenFoodPage = () => window.location.hash = 'market-food';
+  const handleOpenFoodPage = () => window.location.hash = 'thanhloiquetoi-food';
 
-  const handleOpenServiceListing = () => window.location.hash = 'market-services';
+  const handleOpenServiceListing = () => window.location.hash = 'thanhloiquetoi-services';
 
-  const handleOpenJobListing = () => window.location.hash = 'market-jobs';
+  const handleOpenJobListing = () => window.location.hash = 'thanhloiquetoi-jobs';
 
-  const handleOpenRealEstate = () => window.location.hash = 'market-real-estate';
+  const handleOpenRealEstate = () => window.location.hash = 'thanhloiquetoi-real-estate';
 
   // Back Handlers
   const handleBackToHome = () => {
@@ -118,7 +119,7 @@ const App: React.FC = () => {
 
   const handleBackToProjects = () => window.location.hash = 'projects';
 
-  const handleBackToMarket = () => window.location.hash = 'market';
+  const handleBackToMarket = () => window.location.hash = 'thanhloiquetoi';
 
   if (showMerch) {
     return <ProductShowcase onBack={handleBackToHome} />;
