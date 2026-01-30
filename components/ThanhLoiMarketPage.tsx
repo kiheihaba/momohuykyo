@@ -21,7 +21,8 @@ import {
   XCircle,
   AlertCircle,
   User,
-  ChevronDown
+  ChevronDown,
+  ShoppingBag
 } from 'lucide-react';
 import Footer from './Footer';
 
@@ -33,6 +34,7 @@ interface ThanhLoiMarketPageProps {
   onOpenRealEstate?: () => void;
   onOpenFashion?: () => void;
   onOpenVehicles?: () => void;
+  onOpenGeneralMarket?: () => void;
 }
 
 // Interface chuẩn cho Listing hiển thị ở trang chủ
@@ -64,9 +66,10 @@ const categories = [
   { id: 1, name: "Ẩm Thực", icon: <Utensils size={24} />, color: "bg-orange-100 text-orange-600" },
   { id: 2, name: "Dịch Vụ", icon: <Wrench size={24} />, color: "bg-blue-100 text-blue-600" },
   { id: 3, name: "Việc Làm", icon: <Briefcase size={24} />, color: "bg-green-100 text-green-600" }, 
-  { id: 4, name: "Thời Trang", icon: <Shirt size={24} />, color: "bg-pink-100 text-pink-600" },
+  { id: 4, name: "Shop Online", icon: <Star size={24} />, color: "bg-pink-100 text-pink-600" },
   { id: 5, name: "Xe Cộ", icon: <Car size={24} />, color: "bg-red-100 text-red-600" },
   { id: 6, name: "Bất động sản", icon: <Home size={24} />, color: "bg-purple-100 text-purple-600" },
+  { id: 7, name: "Chợ Mua Sắm", icon: <ShoppingBag size={24} />, color: "bg-teal-100 text-teal-600" },
 ];
 
 const ThanhLoiMarketPage: React.FC<ThanhLoiMarketPageProps> = ({ 
@@ -76,7 +79,8 @@ const ThanhLoiMarketPage: React.FC<ThanhLoiMarketPageProps> = ({
   onOpenJobs, 
   onOpenRealEstate,
   onOpenFashion,
-  onOpenVehicles
+  onOpenVehicles,
+  onOpenGeneralMarket
 }) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [listings, setListings] = useState<MarketListing[]>([]);
@@ -298,10 +302,12 @@ const ThanhLoiMarketPage: React.FC<ThanhLoiMarketPageProps> = ({
         onOpenJobs();
     } else if (catName === "Bất động sản" && onOpenRealEstate) {
         onOpenRealEstate();
-    } else if (catName === "Thời Trang" && onOpenFashion) {
+    } else if (catName === "Shop Online" && onOpenFashion) {
         onOpenFashion();
     } else if (catName === "Xe Cộ" && onOpenVehicles) {
         onOpenVehicles();
+    } else if (catName === "Chợ Mua Sắm" && onOpenGeneralMarket) {
+        onOpenGeneralMarket();
     }
   };
 
