@@ -40,14 +40,14 @@ interface ServiceItem {
 // URL Google Sheet CSV (Dịch vụ)
 const SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRJrotBdzd-po6z_Zd6fbew0pqGgdDdZjRMf7vutpfJia2aFpNyTZNdvGZxN4MfcGtRwJWUrmICvZMF/pub?gid=987608880&single=true&output=csv";
 
-// Danh mục dịch vụ
+// Danh mục dịch vụ (ID khớp với cột loai_dich_vu trong CSV)
 const serviceCategories = [
-  { id: "all", name: "Tất cả", icon: <Grid size={18} /> },
-  { id: "Sửa chữa", name: "Sửa chữa", icon: <Wrench size={18} /> },
-  { id: "Vận chuyển", name: "Vận chuyển", icon: <Truck size={18} /> },
-  { id: "Làm đẹp", name: "Làm đẹp", icon: <Scissors size={18} /> },
-  { id: "Nông nghiệp", name: "Nông nghiệp", icon: <Wheat size={18} /> },
-  { id: "Tiệc tùng", name: "Tiệc tùng", icon: <PartyPopper size={18} /> },
+  { id: "all", name: "TẤT CẢ", icon: <Grid size={16} /> },
+  { id: "SuaChua", name: "SỬA CHỮA", icon: <Wrench size={16} /> },
+  { id: "VanChuyen", name: "VẬN CHUYỂN", icon: <Truck size={16} /> },
+  { id: "LamDep", name: "LÀM ĐẸP & Y TẾ", icon: <Scissors size={16} /> },
+  { id: "NongNghiep", name: "NÔNG NGHIỆP", icon: <Wheat size={16} /> },
+  { id: "TiecTung", name: "TIỆC TÙNG", icon: <PartyPopper size={16} /> },
 ];
 
 const ServiceListingPage: React.FC<ServiceListingPageProps> = ({ onBack }) => {
@@ -57,7 +57,7 @@ const ServiceListingPage: React.FC<ServiceListingPageProps> = ({ onBack }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // --- LOGIC DỮ LIỆU (GIỮ NGUYÊN) ---
+  // --- LOGIC DỮ LIỆU ---
   const normalizeHeader = (str: string) => {
     return str.toLowerCase()
       .normalize("NFD").replace(/[\u0300-\u036f]/g, "") 
@@ -82,9 +82,10 @@ const ServiceListingPage: React.FC<ServiceListingPageProps> = ({ onBack }) => {
         return headers.findIndex(h => keys.includes(normalizeHeader(h)));
     };
 
+    // Tìm cột dựa trên nhiều từ khóa (bao gồm loai_dich_vu)
     const idxImage = getIndex(['anhdaidien', 'anh', 'avatar', 'hinh']);
     const idxName = getIndex(['tentho', 'hoten', 'ten', 'name']);
-    const idxCategory = getIndex(['loaidichvu', 'nghanhnghe', 'loai', 'category']);
+    const idxCategory = getIndex(['loaidichvu', 'loai_dich_vu', 'nghanhnghe', 'category']);
     const idxDesc = getIndex(['motangan', 'mota', 'description', 'skill']);
     const idxLocation = getIndex(['diachi', 'khuvuc', 'location', 'address']);
     const idxPhone = getIndex(['sdt', 'dienthoai', 'phone', 'contact']);
@@ -98,7 +99,7 @@ const ServiceListingPage: React.FC<ServiceListingPageProps> = ({ onBack }) => {
 
             return {
                 id: `service-${index}`,
-                category: getCol(idxCategory) || "Dịch vụ khác",
+                category: getCol(idxCategory) || "Khac", // Mặc định nếu thiếu category
                 name: getCol(idxName) || "Thợ Thạnh Lợi",
                 description: getCol(idxDesc) || "Liên hệ để biết thêm chi tiết",
                 location: getCol(idxLocation) || "Thạnh Lợi",
@@ -129,12 +130,26 @@ const ServiceListingPage: React.FC<ServiceListingPageProps> = ({ onBack }) => {
     fetchData();
   }, []);
 
+  // --- LOGIC LỌC (FILTERING) ---
   const filteredServices = services.filter(item => {
-    const matchesCategory = activeCategory === "all" || item.category === activeCategory || (activeCategory !== "all" && item.category.includes(activeCategory));
+    // 1. Lọc theo Category (So sánh chính xác mã)
+    // Chuyển về lowercase để so sánh an toàn (VD: 'suachua' == 'SuaChua')
+    const itemCat = item.category.trim().toLowerCase();
+    const activeCat = activeCategory.toLowerCase();
+    const matchesCategory = activeCategory === "all" || itemCat === activeCat;
+
+    // 2. Lọc theo Tìm kiếm
     const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
                           item.description.toLowerCase().includes(searchTerm.toLowerCase());
+    
     return matchesCategory && matchesSearch;
   });
+
+  // Helper để lấy tên hiển thị đẹp cho badge category trên thẻ card
+  const getCategoryDisplayName = (catCode: string) => {
+      const found = serviceCategories.find(c => c.id.toLowerCase() === catCode.toLowerCase());
+      return found ? found.name : catCode;
+  };
 
   return (
     <div className="fixed inset-0 z-[60] bg-[#050505] overflow-y-auto overflow-x-hidden custom-scrollbar text-white font-sans">
@@ -177,8 +192,8 @@ const ServiceListingPage: React.FC<ServiceListingPageProps> = ({ onBack }) => {
                     onClick={() => setActiveCategory(cat.id)}
                     className={`whitespace-nowrap flex items-center gap-2 px-5 py-2.5 rounded-full border text-xs font-bold uppercase tracking-wider transition-all duration-300 ${
                         activeCategory === cat.id 
-                        ? "bg-brand-cyan text-black border-brand-cyan shadow-[0_0_15px_rgba(0,255,255,0.4)]" 
-                        : "bg-white/5 text-gray-400 border-white/10 hover:border-gray-500 hover:text-white"
+                        ? "bg-brand-cyan text-black border-brand-cyan shadow-[0_0_15px_rgba(0,255,255,0.4)] transform scale-105" 
+                        : "bg-transparent text-gray-400 border-white/10 hover:border-gray-500 hover:text-white"
                     }`}
                 >
                     {cat.icon}
@@ -207,14 +222,20 @@ const ServiceListingPage: React.FC<ServiceListingPageProps> = ({ onBack }) => {
         {!isLoading && !error && filteredServices.length === 0 && (
             <div className="text-center py-20 text-gray-600">
                 <User size={48} className="mx-auto mb-4 opacity-20" />
-                <p>Chưa tìm thấy dịch vụ nào phù hợp.</p>
+                <p>Chưa tìm thấy dịch vụ nào phù hợp trong mục này.</p>
+                <button 
+                    onClick={() => setActiveCategory('all')} 
+                    className="mt-4 text-brand-cyan text-sm font-bold uppercase hover:underline"
+                >
+                    Xem tất cả dịch vụ
+                </button>
             </div>
         )}
 
         {!isLoading && !error && filteredServices.map((item, index) => (
             <React.Fragment key={item.id}>
                 
-                {/* SPONSORED BANNER (Giữ nguyên nhưng style Dark Mode) */}
+                {/* SPONSORED BANNER */}
                 {index === 2 && (
                     <motion.div 
                         initial={{ opacity: 0, scale: 0.95 }}
@@ -280,9 +301,9 @@ const ServiceListingPage: React.FC<ServiceListingPageProps> = ({ onBack }) => {
                                 {item.name}
                              </h3>
                              
-                             {/* Badge Category */}
+                             {/* Badge Category (Display Name) */}
                              <span className="inline-block bg-gradient-to-r from-cyan-900/50 to-purple-900/50 border border-white/10 text-brand-cyan text-[10px] font-bold px-2 py-0.5 rounded-md uppercase tracking-wide mb-2">
-                                {item.category}
+                                {getCategoryDisplayName(item.category)}
                              </span>
 
                              {/* Description */}
