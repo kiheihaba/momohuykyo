@@ -18,6 +18,7 @@ import ServiceListingPage from './components/ServiceListingPage';
 import JobListingPage from './components/JobListingPage';
 import RealEstatePage from './components/RealEstatePage';
 import FashionPage from './components/FashionPage';
+import VehiclePage from './components/VehiclePage';
 
 const App: React.FC = () => {
   const [showMerch, setShowMerch] = useState(false);
@@ -31,6 +32,7 @@ const App: React.FC = () => {
   const [showJobListing, setShowJobListing] = useState(false);
   const [showRealEstate, setShowRealEstate] = useState(false);
   const [showFashion, setShowFashion] = useState(false);
+  const [showVehiclePage, setShowVehiclePage] = useState(false);
 
   // Helper function to turn off all views
   const resetAllViews = () => {
@@ -45,6 +47,7 @@ const App: React.FC = () => {
     setShowJobListing(false);
     setShowRealEstate(false);
     setShowFashion(false);
+    setShowVehiclePage(false);
   };
 
   // Sync state with URL Hash
@@ -66,13 +69,13 @@ const App: React.FC = () => {
       case '#privacy': setShowPrivacy(true); break;
       case '#blog': setShowBlog(true); break;
       case '#projects': setShowAllProjects(true); break;
-      // Updated routes from #market to #thanhloiquetoi
       case '#thanhloiquetoi': setShowMarket(true); break;
       case '#thanhloiquetoi-food': setShowFoodPage(true); break;
       case '#thanhloiquetoi-services': setShowServiceListing(true); break;
       case '#thanhloiquetoi-jobs': setShowJobListing(true); break;
       case '#thanhloiquetoi-real-estate': setShowRealEstate(true); break;
       case '#thanhloiquetoi-fashion': setShowFashion(true); break;
+      case '#thanhloiquetoi-vehicles': setShowVehiclePage(true); break;
       default: break;
     }
   };
@@ -91,77 +94,39 @@ const App: React.FC = () => {
   }, []);
 
   // Updated Handlers: Now they just update the Hash
-  // The useEffect above will catch the change and update the State.
-
   const handleOpenMerch = () => window.location.hash = 'store';
-
   const handleOpenServices = () => window.location.hash = 'solutions';
-
   const handleOpenPrivacy = () => window.location.hash = 'privacy';
-
   const handleOpenBlog = () => window.location.hash = 'blog';
-
   const handleOpenAllProjects = () => window.location.hash = 'projects';
-
   const handleOpenMarket = () => window.location.hash = 'thanhloiquetoi';
-
   const handleOpenFoodPage = () => window.location.hash = 'thanhloiquetoi-food';
-
   const handleOpenServiceListing = () => window.location.hash = 'thanhloiquetoi-services';
-
   const handleOpenJobListing = () => window.location.hash = 'thanhloiquetoi-jobs';
-
   const handleOpenRealEstate = () => window.location.hash = 'thanhloiquetoi-real-estate';
-
   const handleOpenFashion = () => window.location.hash = 'thanhloiquetoi-fashion';
+  const handleOpenVehiclePage = () => window.location.hash = 'thanhloiquetoi-vehicles';
 
   // Back Handlers
   const handleBackToHome = () => {
-    // Use history.pushState to clear hash cleanly or just set to empty
     window.history.pushState("", document.title, window.location.pathname + window.location.search);
-    // Manually trigger sync because pushState doesn't always trigger hashchange event
     syncViewFromHash(); 
   };
 
   const handleBackToProjects = () => window.location.hash = 'projects';
-
   const handleBackToMarket = () => window.location.hash = 'thanhloiquetoi';
 
-  if (showMerch) {
-    return <ProductShowcase onBack={handleBackToHome} />;
-  }
-
-  if (showServices) {
-    return <ServicePage onBack={handleBackToHome} />;
-  }
-
-  if (showPrivacy) {
-    return <PrivacyPolicy onBack={handleBackToHome} />;
-  }
-
-  if (showBlog) {
-    return <BlogPage onBack={handleBackToHome} />;
-  }
-
-  if (showFoodPage) {
-    return <FoodBeveragePage onBack={handleBackToMarket} />;
-  }
-
-  if (showServiceListing) {
-    return <ServiceListingPage onBack={handleBackToMarket} />;
-  }
-
-  if (showJobListing) {
-    return <JobListingPage onBack={handleBackToMarket} />;
-  }
-
-  if (showRealEstate) {
-    return <RealEstatePage onBack={handleBackToMarket} />;
-  }
-
-  if (showFashion) {
-    return <FashionPage onBack={handleBackToMarket} />;
-  }
+  if (showMerch) return <ProductShowcase onBack={handleBackToHome} />;
+  if (showServices) return <ServicePage onBack={handleBackToHome} />;
+  if (showPrivacy) return <PrivacyPolicy onBack={handleBackToHome} />;
+  if (showBlog) return <BlogPage onBack={handleBackToHome} />;
+  
+  if (showFoodPage) return <FoodBeveragePage onBack={handleBackToMarket} />;
+  if (showServiceListing) return <ServiceListingPage onBack={handleBackToMarket} />;
+  if (showJobListing) return <JobListingPage onBack={handleBackToMarket} />;
+  if (showRealEstate) return <RealEstatePage onBack={handleBackToMarket} />;
+  if (showFashion) return <FashionPage onBack={handleBackToMarket} />;
+  if (showVehiclePage) return <VehiclePage onBack={handleBackToMarket} />;
 
   if (showMarket) {
     return <ThanhLoiMarketPage 
@@ -171,6 +136,7 @@ const App: React.FC = () => {
         onOpenJobs={handleOpenJobListing}
         onOpenRealEstate={handleOpenRealEstate}
         onOpenFashion={handleOpenFashion}
+        onOpenVehicles={handleOpenVehiclePage}
     />;
   }
 
