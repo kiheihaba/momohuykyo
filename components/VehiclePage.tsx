@@ -15,11 +15,10 @@ import {
   Calendar,
   Gauge,
   FileCheck,
+  ShieldCheck,
   Tag,
-  AlertCircle,
   RefreshCw,
   Zap,
-  CheckCircle2
 } from 'lucide-react';
 
 interface VehiclePageProps {
@@ -28,22 +27,19 @@ interface VehiclePageProps {
 
 interface VehicleItem {
   id: string;
-  title: string;        // ten_xe
+  title: string;        // tieu_de
   price: string;        // gia_ban
-  type: string;         // loai_xe (XeMay, Oto, XeTai, NongNghiep)
+  type: string;         // loai_xe
   year: string;         // nam_sx
-  odo: string;          // so_km
-  papers: boolean;      // giay_to (true = chinh chu/day du)
-  condition: string;    // tinh_trang_xe (Moi/Cu)
-  status: 'Available' | 'Sold'; // trang_thai (Con/DaBan)
-  isUrgent: boolean;    // tin_gap
   location: string;     // dia_chi
   phone: string;        // sdt
   image: string;        // hinh_anh
+  condition: 'Moi' | 'Cu' | 'DaBan' | 'Khac'; // tinh_trang
+  papers: boolean;      // giay_to == 'ChinhChu'
 }
 
-// URL Google Sheet (Giả lập link, bạn hãy thay link thật có tab Vehicles vào đây)
-const SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRJrotBdzd-po6z_Zd6fbew0pqGgdDdZjRMf7vutpfJia2aFpNyTZNdvGZxN4MfcGtRwJWUrmICvZMF/pub?gid=2048923011&single=true&output=csv";
+// URL Google Sheet (Updated)
+const SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRJrotBdzd-po6z_Zd6fbew0pqGgdDdZjRMf7vutpfJia2aFpNyTZNdvGZxN4MfcGtRwJWUrmICvZMF/pub?gid=522785751&single=true&output=csv";
 
 // Bộ lọc danh mục
 const vehicleCategories = [
@@ -67,9 +63,15 @@ const VehiclePage: React.FC<VehiclePageProps> = ({ onBack }) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [vehicles, setVehicles] = useState<VehicleItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
-  // Parser CSV
+  // Helper: Format Price
+  const formatPrice = (priceStr: string) => {
+    const num = parseInt(priceStr.replace(/\D/g, ''));
+    if (isNaN(num) || num === 0) return priceStr; // Giữ nguyên text nếu không phải số
+    return num.toLocaleString('vi-VN') + 'đ';
+  };
+
+  // Parser CSV Custom (Thay thế PapaParse để nhẹ hơn mà vẫn hiệu quả)
   const parseCSV = (text: string): VehicleItem[] => {
     const rows = text.split('\n');
     const parseLine = (line: string): string[] => {
@@ -84,21 +86,19 @@ const VehiclePage: React.FC<VehiclePageProps> = ({ onBack }) => {
     if (rows.length < 2) return [];
 
     const headers = parseLine(rows[0]);
-    const getIndex = (key: string) => headers.findIndex(h => h.toLowerCase().trim().includes(key.toLowerCase()));
+    // Helper tìm index cột không phân biệt hoa thường
+    const getIndex = (keys: string[]) => headers.findIndex(h => keys.includes(h.toLowerCase().trim()));
 
-    // Mapping columns
-    const idxTitle = getIndex('ten_xe');
-    const idxPrice = getIndex('gia');
-    const idxType = getIndex('loai_xe');
-    const idxYear = getIndex('nam_sx');
-    const idxOdo = getIndex('odo');
-    const idxPapers = getIndex('giay_to');
-    const idxCondition = getIndex('moi_cu'); // Tình trạng xe (Mới/Cũ)
-    const idxStatus = getIndex('tinh_trang'); // Trạng thái bán (DaBan/Con)
-    const idxUrgent = getIndex('tin_gap');
-    const idxImage = getIndex('hinh_anh');
-    const idxPhone = getIndex('sdt');
-    const idxLocation = getIndex('dia_chi');
+    // Mapping columns based on user request
+    const idxImage = getIndex(['hinh_anh', 'anh', 'image']);
+    const idxTitle = getIndex(['tieu_de', 'ten_xe', 'title']);
+    const idxPrice = getIndex(['gia_ban', 'gia', 'price']);
+    const idxYear = getIndex(['nam_sx', 'nam', 'year']);
+    const idxType = getIndex(['loai_xe', 'type']);
+    const idxLocation = getIndex(['dia_chi', 'location']);
+    const idxPhone = getIndex(['sdt', 'phone', 'contact']);
+    const idxCondition = getIndex(['tinh_trang', 'condition']); // Moi, Cu, DaBan
+    const idxPapers = getIndex(['giay_to', 'papers']); // ChinhChu
 
     const parsed = rows.slice(1)
         .filter(r => r.trim() !== '')
@@ -106,33 +106,39 @@ const VehiclePage: React.FC<VehiclePageProps> = ({ onBack }) => {
             const cols = parseLine(row);
             const getCol = (i: number) => (i !== -1 && cols[i]) ? cols[i].trim() : "";
 
-            const statusVal = getCol(idxStatus).toLowerCase();
-            const papersVal = getCol(idxPapers).toLowerCase();
-            const urgentVal = getCol(idxUrgent).toLowerCase();
+            const rawCondition = getCol(idxCondition);
+            let conditionState: 'Moi' | 'Cu' | 'DaBan' | 'Khac' = 'Khac';
+            
+            // Normalize condition logic
+            if (rawCondition.toLowerCase().includes('daban') || rawCondition.toLowerCase().includes('đã bán')) {
+                conditionState = 'DaBan';
+            } else if (rawCondition.toLowerCase().includes('moi') || rawCondition.toLowerCase() === 'new') {
+                conditionState = 'Moi';
+            } else if (rawCondition.toLowerCase().includes('cu') || rawCondition.toLowerCase().includes('old')) {
+                conditionState = 'Cu';
+            }
+
+            const rawPapers = getCol(idxPapers).toLowerCase();
+            const isChinhChu = rawPapers.includes('chinhchu') || rawPapers.includes('chính chủ');
 
             return {
                 id: `veh-${index}`,
                 title: getCol(idxTitle) || "Xe chưa cập nhật tên",
-                price: getCol(idxPrice) || "Thương lượng",
+                price: formatPrice(getCol(idxPrice) || "Liên hệ"),
                 type: getCol(idxType) || "Khac",
-                year: getCol(idxYear) || "---",
-                odo: getCol(idxOdo) || "---",
-                papers: papersVal.includes('co') || papersVal.includes('ok') || papersVal.includes('day du'),
-                condition: getCol(idxCondition) || "Đã qua sử dụng",
-                status: (statusVal.includes('da ban') || statusVal.includes('sold') ? 'Sold' : 'Available') as 'Available' | 'Sold',
-                isUrgent: urgentVal.includes('co') || urgentVal.includes('gap') || urgentVal.includes('hot'),
-                image: getCol(idxImage) || "https://placehold.co/600x400?text=Xe+Thanh+Loi",
+                year: getCol(idxYear) || "--",
+                location: getCol(idxLocation) || "Thạnh Lợi",
                 phone: getCol(idxPhone),
-                location: getCol(idxLocation) || "Thạnh Lợi"
+                image: getCol(idxImage) || "https://placehold.co/600x400?text=Xe+Thanh+Loi",
+                condition: conditionState,
+                papers: isChinhChu
             };
         });
     
-    // Sắp xếp: Tin Gấp lên đầu, Tin đã bán xuống cuối
+    // Sắp xếp: Xe còn hàng lên trước, xe đã bán xuống cuối
     return parsed.sort((a, b) => {
-        if (a.status === 'Sold' && b.status !== 'Sold') return 1;
-        if (a.status !== 'Sold' && b.status === 'Sold') return -1;
-        if (a.isUrgent && !b.isUrgent) return -1;
-        if (!a.isUrgent && b.isUrgent) return 1;
+        if (a.condition === 'DaBan' && b.condition !== 'DaBan') return 1;
+        if (a.condition !== 'DaBan' && b.condition === 'DaBan') return -1;
         return 0;
     });
   };
@@ -142,22 +148,12 @@ const VehiclePage: React.FC<VehiclePageProps> = ({ onBack }) => {
       setIsLoading(true);
       try {
         const response = await fetch(SHEET_URL);
-        // Fallback for demo if URL is empty or fails (since this is a new sub-page request)
-        if (!response.ok && SHEET_URL.includes("2048923011")) {
-             // Mock data if sheet not real
-             setVehicles(MOCK_VEHICLES); 
-             setIsLoading(false);
-             return;
-        }
-        
         const text = await response.text();
         const data = parseCSV(text);
         setVehicles(data);
       } catch (err) {
         console.error("Error:", err);
-        // Fallback to mock data for presentation
-        setVehicles(MOCK_VEHICLES);
-        // setError("Đang cập nhật dữ liệu xe...");
+        // Fallback data if needed
       } finally {
         setIsLoading(false);
       }
@@ -175,10 +171,10 @@ const VehiclePage: React.FC<VehiclePageProps> = ({ onBack }) => {
     // 2. Search
     const matchSearch = item.title.toLowerCase().includes(searchTerm.toLowerCase());
 
-    // 3. Price Range (Simple parsing logic)
+    // 3. Price Range
     let matchPrice = true;
-    const priceNum = parseInt(item.price.replace(/\D/g, '')); // Extract number
-    if (!isNaN(priceNum)) {
+    const priceNum = parseInt(item.price.replace(/\D/g, ''));
+    if (!isNaN(priceNum) && priceNum > 0) {
         if (activePriceRange === "low") matchPrice = priceNum < 10000000;
         else if (activePriceRange === "mid") matchPrice = priceNum >= 10000000 && priceNum <= 30000000;
         else if (activePriceRange === "high") matchPrice = priceNum > 30000000;
@@ -202,7 +198,7 @@ const VehiclePage: React.FC<VehiclePageProps> = ({ onBack }) => {
             <h1 className="font-bold text-lg leading-none text-gray-900 flex items-center gap-2 uppercase tracking-tight">
                 Chợ Xe Thạnh Lợi
             </h1>
-            <p className="text-xs text-gray-500 font-medium">Mua bán Xe máy - Ô tô - Máy cày</p>
+            <p className="text-xs text-gray-500 font-medium">Sàn mua bán xe Uy tín - Chính chủ</p>
         </div>
       </div>
 
@@ -237,7 +233,7 @@ const VehiclePage: React.FC<VehiclePageProps> = ({ onBack }) => {
             ))}
          </div>
 
-         {/* Price Filters (Small tags) */}
+         {/* Price Filters */}
          <div className="flex gap-2 overflow-x-auto scrollbar-hide pt-1">
             {priceRanges.map((range) => (
                 <button
@@ -271,18 +267,20 @@ const VehiclePage: React.FC<VehiclePageProps> = ({ onBack }) => {
             </div>
         )}
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+        {/* Responsive Grid: 2 columns mobile, 3 tablet, 4 desktop */}
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
             {filteredVehicles.map((item) => {
-                const isSold = item.status === 'Sold';
+                const isSold = item.condition === 'DaBan';
+                
                 return (
                     <motion.div
                         key={item.id}
                         initial={{ opacity: 0, y: 10 }}
                         whileInView={{ opacity: 1, y: 0 }}
                         viewport={{ once: true }}
-                        className={`bg-white rounded-xl overflow-hidden shadow-sm border border-gray-200 flex flex-col relative group hover:shadow-lg transition-all duration-300 ${isSold ? 'grayscale opacity-70' : ''}`}
+                        className={`bg-white rounded-xl overflow-hidden shadow-sm border border-gray-200 flex flex-col relative group hover:shadow-xl transition-all duration-300 ${isSold ? 'grayscale opacity-75 pointer-events-none' : ''}`}
                     >
-                        {/* IMAGE SECTION */}
+                        {/* IMAGE SECTION (4:3 Aspect Ratio) */}
                         <div className="relative aspect-[4/3] bg-gray-200 overflow-hidden">
                             <img 
                                 src={item.image} 
@@ -291,90 +289,93 @@ const VehiclePage: React.FC<VehiclePageProps> = ({ onBack }) => {
                                 onError={(e) => { (e.target as HTMLImageElement).src = "https://placehold.co/600x400?text=Xe+Thanh+Loi"; }}
                             />
                             
-                            {/* Badges */}
-                            {!isSold && item.isUrgent && (
-                                <div className="absolute top-0 left-0 bg-red-600 text-white text-[10px] font-black px-3 py-1 rounded-br-lg shadow-md flex items-center gap-1 z-10">
-                                    <Zap size={10} fill="currentColor" /> CẦN BÁN GẤP
-                                </div>
-                            )}
-
-                            {!isSold && (
-                                <div className={`absolute top-2 right-2 px-2 py-1 rounded text-[10px] font-bold uppercase shadow-sm ${
-                                    item.condition.toLowerCase().includes('moi') || item.condition.toLowerCase() === 'new'
-                                    ? "bg-blue-600 text-white" 
-                                    : "bg-gray-800/80 backdrop-blur text-white"
-                                }`}>
-                                    {item.condition}
-                                </div>
-                            )}
-
-                            {/* Verified Paper Badge */}
-                            {!isSold && item.papers && (
-                                <div className="absolute bottom-2 left-2 bg-green-600/90 backdrop-blur text-white text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 shadow-sm">
-                                    <FileCheck size={10} /> Giấy tờ OK
-                                </div>
-                            )}
-
-                            {/* SOLD OUT OVERLAY */}
+                            {/* OVERLAY ĐÃ BÁN */}
                             {isSold && (
-                                <div className="absolute inset-0 bg-black/50 flex items-center justify-center z-20">
-                                    <span className="border-2 border-white text-white px-6 py-2 text-xl font-black uppercase -rotate-12 tracking-widest">
+                                <div className="absolute inset-0 bg-black/60 flex items-center justify-center z-20">
+                                    <span className="border-4 border-white text-white px-4 py-2 text-lg md:text-xl font-black uppercase -rotate-12 tracking-widest whitespace-nowrap">
                                         ĐÃ BÁN
                                     </span>
+                                </div>
+                            )}
+
+                            {/* CONDITION BADGES */}
+                            {!isSold && (
+                                <div className="absolute top-2 left-2 flex flex-col gap-1 z-10">
+                                    {item.condition === 'Moi' && (
+                                        <span className="bg-blue-600 text-white text-[10px] font-bold px-2 py-1 rounded shadow-md uppercase tracking-wide">
+                                            Xe Mới
+                                        </span>
+                                    )}
+                                    {item.condition === 'Cu' && (
+                                        <span className="bg-gray-600 text-white text-[10px] font-bold px-2 py-1 rounded shadow-md uppercase tracking-wide">
+                                            Qua Sử Dụng
+                                        </span>
+                                    )}
+                                </div>
+                            )}
+
+                            {/* VERIFIED BADGE */}
+                            {!isSold && item.papers && (
+                                <div className="absolute bottom-2 left-2 bg-green-600/95 backdrop-blur-sm text-white text-[10px] font-bold px-2 py-1 rounded-full flex items-center gap-1 shadow-md">
+                                    <ShieldCheck size={12} className="text-white" /> Giấy tờ đảm bảo
                                 </div>
                             )}
                         </div>
 
                         {/* INFO SECTION */}
-                        <div className="p-4 flex flex-col flex-grow">
-                            <h3 className="font-bold text-gray-900 text-base leading-snug mb-1 line-clamp-2">
+                        <div className="p-3 md:p-4 flex flex-col flex-grow">
+                            {/* Title */}
+                            <h3 className="font-bold text-gray-900 text-sm md:text-base leading-snug mb-2 line-clamp-2 h-[2.5em]">
                                 {item.title}
                             </h3>
                             
-                            <div className="flex items-center gap-2 mb-3">
-                                <p className={`font-extrabold text-lg ${isSold ? 'text-gray-500 decoration-slate-500' : 'text-[#ff424e]'}`}>
+                            {/* Badges Row (Year & Type) */}
+                            <div className="flex flex-wrap gap-2 mb-3">
+                                {item.year && item.year !== '--' && (
+                                    <span className="inline-flex items-center gap-1 bg-gray-100 text-gray-600 text-[10px] px-2 py-0.5 rounded font-medium border border-gray-200">
+                                        <Calendar size={10} /> {item.year}
+                                    </span>
+                                )}
+                                {item.type && (
+                                    <span className="inline-flex items-center gap-1 bg-gray-100 text-gray-600 text-[10px] px-2 py-0.5 rounded font-medium border border-gray-200">
+                                        <Tag size={10} /> {item.type}
+                                    </span>
+                                )}
+                            </div>
+
+                            {/* Price */}
+                            <div className="mt-auto mb-3">
+                                <p className={`font-black text-lg md:text-xl ${isSold ? 'text-gray-400 decoration-slate-400 line-through' : 'text-[#ff424e]'}`}>
                                     {item.price}
                                 </p>
                             </div>
 
-                            {/* Specs Row */}
-                            <div className="flex items-center gap-3 text-xs text-gray-500 bg-gray-50 p-2 rounded-lg mb-3 border border-gray-100">
-                                <div className="flex items-center gap-1">
-                                    <Calendar size={12} className="text-gray-400"/>
-                                    <span>{item.year}</span>
-                                </div>
-                                <div className="w-[1px] h-3 bg-gray-300"></div>
-                                <div className="flex items-center gap-1">
-                                    <Gauge size={12} className="text-gray-400"/>
-                                    <span className="truncate max-w-[80px]">{item.odo} Km</span>
-                                </div>
-                                <div className="w-[1px] h-3 bg-gray-300"></div>
-                                <div className="flex items-center gap-1 truncate">
-                                    <MapPin size={12} className="text-gray-400"/>
-                                    <span className="truncate">{item.location}</span>
-                                </div>
+                            {/* Location */}
+                            <div className="flex items-center gap-1 text-xs text-gray-500 mb-4 border-t border-gray-100 pt-2">
+                                <MapPin size={12} className="text-gray-400"/>
+                                <span className="truncate">{item.location}</span>
                             </div>
 
-                            {/* Buttons */}
-                            <div className="grid grid-cols-2 gap-2 mt-auto">
+                            {/* Action Buttons */}
+                            <div className="grid grid-cols-2 gap-2">
                                 <a 
                                     href={isSold ? undefined : `tel:${item.phone}`}
-                                    className={`flex items-center justify-center gap-1 py-2.5 rounded-lg text-xs font-bold uppercase transition-colors ${
+                                    className={`flex items-center justify-center gap-1 py-2 rounded-lg text-[10px] md:text-xs font-bold uppercase transition-colors ${
                                         isSold 
-                                        ? "bg-gray-200 text-gray-400 cursor-not-allowed" 
-                                        : "bg-green-600 text-white hover:bg-green-500 shadow-md shadow-green-100"
+                                        ? "bg-gray-100 text-gray-400 cursor-not-allowed" 
+                                        : "bg-green-600 text-white hover:bg-green-500 shadow-lg shadow-green-100"
                                     }`}
                                 >
-                                    <Phone size={14} /> Gọi điện
+                                    <Phone size={14} /> Gọi Bán
                                 </a>
                                 <a 
                                     href={isSold ? undefined : `https://zalo.me/${item.phone}`}
                                     target="_blank" 
                                     rel="noreferrer"
-                                    className={`flex items-center justify-center gap-1 py-2.5 rounded-lg text-xs font-bold uppercase transition-colors ${
+                                    className={`flex items-center justify-center gap-1 py-2 rounded-lg text-[10px] md:text-xs font-bold uppercase transition-colors ${
                                         isSold 
-                                        ? "bg-gray-200 text-gray-400 cursor-not-allowed" 
-                                        : "bg-blue-600 text-white hover:bg-blue-500 shadow-md shadow-blue-100"
+                                        ? "bg-gray-100 text-gray-400 cursor-not-allowed" 
+                                        : "bg-blue-600 text-white hover:bg-blue-500 shadow-lg shadow-blue-100"
                                     }`}
                                 >
                                     <MessageCircle size={14} /> Zalo
@@ -390,14 +391,5 @@ const VehiclePage: React.FC<VehiclePageProps> = ({ onBack }) => {
     </div>
   );
 };
-
-// Dữ liệu mẫu (Fallback khi không có Sheet thật)
-const MOCK_VEHICLES: VehicleItem[] = [
-    { id: '1', title: 'Honda Vision 2021 Chính chủ', price: '28.500.000đ', type: 'XeMay', year: '2021', odo: '12000', papers: true, condition: 'Xe Cũ', status: 'Available', isUrgent: true, image: 'https://images.unsplash.com/photo-1696230554030-84e036e65a6f?auto=format&fit=crop&q=80&w=800', phone: '0901234567', location: 'Ấp 4, Thạnh Lợi' },
-    { id: '2', title: 'Xe tải Kia K250 Thùng bạt', price: '380.000.000đ', type: 'XeTai', year: '2019', odo: '45000', papers: true, condition: 'Xe Cũ', status: 'Available', isUrgent: false, image: 'https://images.unsplash.com/photo-1601584115197-04ecc0da31d7?auto=format&fit=crop&q=80&w=800', phone: '0901234567', location: 'Chợ Thạnh Lợi' },
-    { id: '3', title: 'Máy cày Kubota L5018', price: '250.000.000đ', type: 'NongNghiep', year: '2018', odo: '2000h', papers: false, condition: 'Xe Cũ', status: 'Available', isUrgent: true, image: 'https://images.unsplash.com/photo-1534234828569-2c70eb3d77cc?auto=format&fit=crop&q=80&w=800', phone: '0901234567', location: 'Kênh Xáng' },
-    { id: '4', title: 'Honda Wave Alpha 2023 Mới 100%', price: '19.000.000đ', type: 'XeMay', year: '2023', odo: '0', papers: true, condition: 'Xe Mới', status: 'Available', isUrgent: false, image: 'https://images.unsplash.com/photo-1558981403-c5f9899a28bc?auto=format&fit=crop&q=80&w=800', phone: '0901234567', location: 'Cửa hàng Xe máy Tám' },
-    { id: '5', title: 'Exciter 150 GP 2017', price: '22.000.000đ', type: 'XeMay', year: '2017', odo: '30000', papers: true, condition: 'Xe Cũ', status: 'Sold', isUrgent: false, image: 'https://images.unsplash.com/photo-1568772585407-9361f9bf3a87?auto=format&fit=crop&q=80&w=800', phone: '0901234567', location: 'Ấp 3' },
-];
 
 export default VehiclePage;
