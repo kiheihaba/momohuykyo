@@ -35,7 +35,7 @@ interface FoodItem {
   isOpen: boolean; // derived from trang_thai
   image: string; // anh_mon_an
   description: string; // mo_ta
-  category: string; // phan_loai
+  category: string; // loai_mon (Mapped from CSV)
   phone: string; // sdt_zalo
   status: string; // trang_thai (Het / Con)
   rating: number; // default
@@ -44,12 +44,13 @@ interface FoodItem {
 // Google Sheet CSV Link
 const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRJrotBdzd-po6z_Zd6fbew0pqGgdDdZjRMf7vutpfJia2aFpNyTZNdvGZxN4MfcGtRwJWUrmICvZMF/pub?gid=0&single=true&output=csv";
 
+// Cập nhật ID danh mục khớp với dữ liệu cột 'loai_mon' trong CSV
 const categories = [
   { id: "all", name: "Tất cả", icon: <Utensils size={16} /> },
-  { id: "Cơm/Bún", name: "Cơm/Bún", icon: <Utensils size={16} /> },
-  { id: "Trà sữa/Cafe", name: "Đồ uống", icon: <Coffee size={16} /> },
-  { id: "Ăn vặt", name: "Ăn vặt", icon: <IceCream size={16} /> },
-  { id: "Nông sản", name: "Nông sản", icon: <Wheat size={16} /> },
+  { id: "ComBun", name: "Cơm/Bún", icon: <Utensils size={16} /> },
+  { id: "DoUong", name: "Đồ uống", icon: <Coffee size={16} /> },
+  { id: "AnVat", name: "Ăn vặt", icon: <IceCream size={16} /> },
+  { id: "NongSan", name: "Nông sản", icon: <Wheat size={16} /> },
 ];
 
 const FoodBeveragePage: React.FC<FoodBeveragePageProps> = ({ onBack }) => {
@@ -68,46 +69,45 @@ const FoodBeveragePage: React.FC<FoodBeveragePageProps> = ({ onBack }) => {
     const rows = text.split('\n');
     
     // Robust CSV Line Parser
-    // FIX: This regex splits by comma ONLY if it's not inside quotes.
-    // This preserves spaces within fields (e.g. "Trà Sữa Khoai Môn" stays intact).
     const parseLine = (line: string): string[] => {
         const parts = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
         
         return parts.map(part => {
             let p = part.trim();
-            // Remove wrapping quotes if present
             if (p.startsWith('"') && p.endsWith('"')) {
                 p = p.slice(1, -1);
             }
-            // Handle escaped double quotes ("") -> (")
             return p.replace(/""/g, '"');
         });
     };
 
     if (rows.length === 0) return [];
     
-    // Parse headers using the same robust logic
+    // Parse headers
     const headers = parseLine(rows[0]);
     
     // Mapping helper to find index by header name (insensitive)
-    const getIndex = (key: string) => headers.findIndex(h => h.toLowerCase().trim() === key.toLowerCase().trim());
+    const getIndex = (keys: string[]) => {
+        return headers.findIndex(h => keys.includes(h.toLowerCase().trim()));
+    };
 
-    const idxName = getIndex('mon_an');
-    const idxImage = getIndex('anh_mon_an');
-    const idxPrice = getIndex('gia_tien');
-    const idxShop = getIndex('ten_quan');
-    const idxPhone = getIndex('sdt_zalo');
-    const idxStatus = getIndex('trang_thai');
-    const idxAddress = getIndex('dia_chi');
-    const idxCategory = getIndex('phan_loai');
-    const idxDesc = getIndex('mo_ta');
+    const idxName = getIndex(['mon_an', 'ten_mon']);
+    const idxImage = getIndex(['anh_mon_an', 'hinh_anh']);
+    const idxPrice = getIndex(['gia_tien', 'gia']);
+    const idxShop = getIndex(['ten_quan', 'shop']);
+    const idxPhone = getIndex(['sdt_zalo', 'sdt']);
+    const idxStatus = getIndex(['trang_thai']);
+    const idxAddress = getIndex(['dia_chi']);
+    // Tìm cột loai_mon (hoặc phan_loai cũ làm fallback)
+    const idxCategory = getIndex(['loai_mon', 'phan_loai', 'category']);
+    const idxDesc = getIndex(['mo_ta']);
 
     return rows.slice(1).filter(r => r.trim() !== '').map((row, index) => {
       const values = parseLine(row);
       
       const getValue = (i: number) => {
          if (i === -1 || i >= values.length) return '';
-         return values[i];
+         return values[i].trim();
       };
 
       const status = getValue(idxStatus);
@@ -128,7 +128,7 @@ const FoodBeveragePage: React.FC<FoodBeveragePageProps> = ({ onBack }) => {
         isOpen: isOpen,
         address: address,
         description: getValue(idxDesc) || `Món ngon từ ${shopName}. Đặt hàng ngay để thưởng thức!`,
-        category: getValue(idxCategory) || "Khác",
+        category: getValue(idxCategory), // Lấy giá trị chính xác từ cột loai_mon (VD: ComBun, DoUong)
         rating: 5.0,
       };
     });
@@ -154,12 +154,17 @@ const FoodBeveragePage: React.FC<FoodBeveragePageProps> = ({ onBack }) => {
     fetchData();
   }, []);
 
-  // Filtering Logic
+  // Filtering Logic Updated
   const filteredItems = foodItems.filter(item => {
-    const itemCat = item.category || "Khác";
-    const matchesCategory = activeCategory === "all" || itemCat.includes(activeCategory) || (activeCategory === "Khác" && !categories.some(c => itemCat.includes(c.name) && c.id !== 'all'));
+    // 1. Filter by Category (Exact Match with 'loai_mon')
+    const matchesCategory = activeCategory === "all" || item.category === activeCategory;
+    
+    // 2. Filter by Open Status
     const matchesOpen = showOpenOnly ? item.isOpen : true;
+    
+    // 3. Filter by Search Term
     const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase());
+    
     return matchesCategory && matchesOpen && matchesSearch;
   });
 
@@ -266,7 +271,7 @@ const FoodBeveragePage: React.FC<FoodBeveragePageProps> = ({ onBack }) => {
                 
                 {filteredItems.length === 0 ? (
                     <div className="text-center py-12 text-gray-500">
-                        <p>Không tìm thấy món ăn nào phù hợp.</p>
+                        <p>Không tìm thấy món ăn nào phù hợp với bộ lọc.</p>
                     </div>
                 ) : (
                     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
