@@ -17,6 +17,7 @@ import FoodBeveragePage from './components/FoodBeveragePage';
 import ServiceListingPage from './components/ServiceListingPage';
 import JobListingPage from './components/JobListingPage';
 import RealEstatePage from './components/RealEstatePage';
+import FashionPage from './components/FashionPage';
 
 const App: React.FC = () => {
   const [showMerch, setShowMerch] = useState(false);
@@ -29,6 +30,7 @@ const App: React.FC = () => {
   const [showServiceListing, setShowServiceListing] = useState(false);
   const [showJobListing, setShowJobListing] = useState(false);
   const [showRealEstate, setShowRealEstate] = useState(false);
+  const [showFashion, setShowFashion] = useState(false);
 
   // Helper function to turn off all views
   const resetAllViews = () => {
@@ -42,6 +44,7 @@ const App: React.FC = () => {
     setShowServiceListing(false);
     setShowJobListing(false);
     setShowRealEstate(false);
+    setShowFashion(false);
   };
 
   // Sync state with URL Hash
@@ -69,6 +72,7 @@ const App: React.FC = () => {
       case '#thanhloiquetoi-services': setShowServiceListing(true); break;
       case '#thanhloiquetoi-jobs': setShowJobListing(true); break;
       case '#thanhloiquetoi-real-estate': setShowRealEstate(true); break;
+      case '#thanhloiquetoi-fashion': setShowFashion(true); break;
       default: break;
     }
   };
@@ -108,6 +112,8 @@ const App: React.FC = () => {
   const handleOpenJobListing = () => window.location.hash = 'thanhloiquetoi-jobs';
 
   const handleOpenRealEstate = () => window.location.hash = 'thanhloiquetoi-real-estate';
+
+  const handleOpenFashion = () => window.location.hash = 'thanhloiquetoi-fashion';
 
   // Back Handlers
   const handleBackToHome = () => {
@@ -153,6 +159,10 @@ const App: React.FC = () => {
     return <RealEstatePage onBack={handleBackToMarket} />;
   }
 
+  if (showFashion) {
+    return <FashionPage onBack={handleBackToMarket} />;
+  }
+
   if (showMarket) {
     return <ThanhLoiMarketPage 
         onBack={handleBackToProjects} 
@@ -160,6 +170,7 @@ const App: React.FC = () => {
         onOpenServices={handleOpenServiceListing}
         onOpenJobs={handleOpenJobListing}
         onOpenRealEstate={handleOpenRealEstate}
+        onOpenFashion={handleOpenFashion}
     />;
   }
 

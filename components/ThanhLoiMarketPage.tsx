@@ -29,6 +29,7 @@ interface ThanhLoiMarketPageProps {
   onOpenServices?: () => void;
   onOpenJobs?: () => void;
   onOpenRealEstate?: () => void;
+  onOpenFashion?: () => void;
 }
 
 // Interface chuẩn cho Listing hiển thị ở trang chủ
@@ -69,7 +70,8 @@ const ThanhLoiMarketPage: React.FC<ThanhLoiMarketPageProps> = ({
   onOpenFood, 
   onOpenServices, 
   onOpenJobs,
-  onOpenRealEstate
+  onOpenRealEstate,
+  onOpenFashion
 }) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [listings, setListings] = useState<MarketListing[]>([]);
@@ -284,6 +286,8 @@ const ThanhLoiMarketPage: React.FC<ThanhLoiMarketPageProps> = ({
         onOpenJobs();
     } else if (catName === "Bất động sản" && onOpenRealEstate) {
         onOpenRealEstate();
+    } else if (catName === "Thời Trang" && onOpenFashion) {
+        onOpenFashion();
     }
   };
 

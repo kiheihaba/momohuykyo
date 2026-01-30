@@ -56,7 +56,7 @@ const JobListingPage: React.FC<JobListingPageProps> = ({ onBack }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Hàm Parser CSV mạnh mẽ (tương tự PapaParse logic)
+  // Hàm Parser CSV mạnh mẽ
   const parseCSV = (text: string): JobItem[] => {
     const rows = text.split('\n');
     
@@ -76,8 +76,7 @@ const JobListingPage: React.FC<JobListingPageProps> = ({ onBack }) => {
     const headers = parseLine(rows[0]);
     const getIndex = (key: string) => headers.findIndex(h => h.toLowerCase().trim() === key.toLowerCase().trim());
 
-    // 2. Map Columns (Ánh xạ theo yêu cầu của bạn)
-    // Ưu tiên tên cột mới, fallback về tên cũ để an toàn
+    // 2. Map Columns (Ánh xạ theo yêu cầu)
     const idxTitle = getIndex('tieu_de') !== -1 ? getIndex('tieu_de') : getIndex('cong_viec');
     const idxSalary = getIndex('muc_luong');
     const idxEmployer = getIndex('nguoi_tuyen');
@@ -95,8 +94,8 @@ const JobListingPage: React.FC<JobListingPageProps> = ({ onBack }) => {
             const getCol = (i: number) => (i !== -1 && cols[i]) ? cols[i].trim() : "";
 
             const typeVal = getCol(idxType).toLowerCase();
-            // Logic: Nếu loai_tin chứa 'gap' -> isUrgent = true
-            const isUrgent = typeVal.includes('gap') || typeVal.includes('hot');
+            // Logic: Nếu loai_tin chứa 'gap' (bất kể hoa thường) -> isUrgent = true
+            const isUrgent = typeVal.includes('gap') || typeVal.includes('hot') || typeVal.includes('gấp');
 
             return {
                 id: `job-${index}`,
@@ -112,8 +111,15 @@ const JobListingPage: React.FC<JobListingPageProps> = ({ onBack }) => {
             };
         });
 
-    // 4. Sort: Urgent jobs first
-    return parsedData.sort((a, b) => (a.isUrgent === b.isUrgent) ? 0 : a.isUrgent ? -1 : 1);
+    // 4. SORTING: Đưa tin Gấp lên đầu danh sách
+    return parsedData.sort((a, b) => {
+        // Nếu a Gấp và b Thường -> a lên trước (-1)
+        if (a.isUrgent && !b.isUrgent) return -1;
+        // Nếu a Thường và b Gấp -> b lên trước (1)
+        if (!a.isUrgent && b.isUrgent) return 1;
+        // Nếu cùng loại -> giữ nguyên thứ tự
+        return 0;
+    });
   };
 
   useEffect(() => {
@@ -247,15 +253,17 @@ const JobListingPage: React.FC<JobListingPageProps> = ({ onBack }) => {
                     initial={{ opacity: 0, y: 10 }}
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true }}
-                    className={`bg-white rounded-xl p-4 shadow-sm border relative overflow-hidden ${
-                        job.isUrgent ? 'border-red-200 shadow-red-100 ring-1 ring-red-100' : 'border-gray-200'
+                    className={`bg-white rounded-xl p-4 shadow-sm border relative overflow-hidden transition-all duration-300 ${
+                        job.isUrgent 
+                        ? 'border-red-300 shadow-red-50 ring-1 ring-red-100' // Visual Highlight cho tin Gấp
+                        : 'border-gray-200'
                     }`}
                 >
                     {/* Badge Tuyển Gấp (Conditional Rendering) */}
                     {job.isUrgent && (
-                        <div className="absolute top-0 right-0">
+                        <div className="absolute top-0 right-0 z-10">
                             <div className="bg-red-600 text-white text-[10px] font-black px-3 py-1 rounded-bl-xl shadow-sm flex items-center gap-1 animate-pulse">
-                                <Megaphone size={10} fill="currentColor" /> TUYỂN GẤP
+                                TUYỂN GẤP 🔥
                             </div>
                         </div>
                     )}
@@ -304,9 +312,13 @@ const JobListingPage: React.FC<JobListingPageProps> = ({ onBack }) => {
                         {/* Nút GỌI XIN VIỆC - Full width */}
                         <a 
                             href={`tel:${job.phone}`}
-                            className="w-full bg-green-600 text-white py-3.5 rounded-xl text-sm font-bold uppercase shadow-lg shadow-green-200 hover:bg-green-500 active:scale-95 transition-all flex items-center justify-center gap-2"
+                            className={`w-full py-3.5 rounded-xl text-sm font-bold uppercase shadow-lg transition-all flex items-center justify-center gap-2 ${
+                                job.isUrgent 
+                                ? 'bg-red-600 hover:bg-red-500 text-white shadow-red-200' 
+                                : 'bg-green-600 hover:bg-green-500 text-white shadow-green-200'
+                            } active:scale-95`}
                         >
-                            <Phone size={18} fill="currentColor" /> GỌI XIN VIỆC NGAY
+                            <Phone size={18} fill="currentColor" /> {job.isUrgent ? 'GỌI NGAY (GẤP)' : 'GỌI XIN VIỆC'}
                         </a>
                         <div className="text-center mt-2">
                              <span className="text-[10px] text-gray-400 flex items-center justify-center gap-1">
