@@ -17,7 +17,8 @@ import {
   Camera,
   RefreshCw,
   AlertCircle,
-  User
+  User,
+  ExternalLink
 } from 'lucide-react';
 
 interface ServiceListingPageProps {
@@ -32,6 +33,7 @@ interface ServiceItem {
   location: string; // dia_chi
   phone: string; // sdt
   image: string; // anh_dai_dien
+  linkProfile: string; // link_profile (NEW)
 }
 
 // URL Google Sheet CSV (Dịch vụ)
@@ -90,6 +92,7 @@ const ServiceListingPage: React.FC<ServiceListingPageProps> = ({ onBack }) => {
     const idxDesc = getIndex(['motangan', 'mota', 'description', 'skill']);
     const idxLocation = getIndex(['diachi', 'khuvuc', 'location', 'address']);
     const idxPhone = getIndex(['sdt', 'dienthoai', 'phone', 'contact']);
+    const idxProfile = getIndex(['link_profile', 'profile', 'facebook', 'web', 'trangcanhan']); // Cột Link Profile mới
 
     // 3. Map dữ liệu
     return rows.slice(1)
@@ -105,7 +108,8 @@ const ServiceListingPage: React.FC<ServiceListingPageProps> = ({ onBack }) => {
                 description: getCol(idxDesc) || "Liên hệ để biết thêm chi tiết",
                 location: getCol(idxLocation) || "Thạnh Lợi",
                 phone: getCol(idxPhone),
-                image: getCol(idxImage), 
+                image: getCol(idxImage),
+                linkProfile: getCol(idxProfile) // Lấy dữ liệu link profile
             };
         });
   };
@@ -304,14 +308,27 @@ const ServiceListingPage: React.FC<ServiceListingPageProps> = ({ onBack }) => {
                         >
                             <Phone size={14} /> GỌI NGAY
                         </a>
-                        <a 
-                            href={`https://zalo.me/${item.phone}`}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="flex-1 bg-blue-600 text-white py-2.5 rounded-lg text-xs font-bold uppercase flex items-center justify-center gap-1 hover:bg-blue-500 shadow-md shadow-blue-200 active:scale-95 transition-all"
-                        >
-                            <MessageCircle size={14} /> Chat Zalo
-                        </a>
+                        
+                        {/* Logic Nút thứ 2: Link Profile hoặc Chat Zalo fallback */}
+                        {item.linkProfile ? (
+                            <a 
+                                href={item.linkProfile}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="flex-1 bg-blue-600 text-white py-2.5 rounded-lg text-xs font-bold uppercase flex items-center justify-center gap-1 hover:bg-blue-500 shadow-md shadow-blue-200 active:scale-95 transition-all"
+                            >
+                                <User size={14} /> Xem Hồ Sơ
+                            </a>
+                        ) : (
+                            <a 
+                                href={`https://zalo.me/${item.phone}`}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="flex-1 bg-blue-600 text-white py-2.5 rounded-lg text-xs font-bold uppercase flex items-center justify-center gap-1 hover:bg-blue-500 shadow-md shadow-blue-200 active:scale-95 transition-all"
+                            >
+                                <MessageCircle size={14} /> Chat Zalo
+                            </a>
+                        )}
                     </div>
                 </motion.div>
 
