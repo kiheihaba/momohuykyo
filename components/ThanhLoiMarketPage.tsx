@@ -20,7 +20,8 @@ import {
   RefreshCw,
   XCircle,
   AlertCircle,
-  User
+  User,
+  ChevronDown
 } from 'lucide-react';
 import Footer from './Footer';
 
@@ -71,7 +72,7 @@ const ThanhLoiMarketPage: React.FC<ThanhLoiMarketPageProps> = ({
   onBack, 
   onOpenFood, 
   onOpenServices, 
-  onOpenJobs,
+  onOpenJobs, 
   onOpenRealEstate,
   onOpenFashion
 }) => {
@@ -80,6 +81,9 @@ const ThanhLoiMarketPage: React.FC<ThanhLoiMarketPageProps> = ({
   const [searchResults, setSearchResults] = useState<MarketListing[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  
+  // PAGINATION STATE
+  const [visibleCount, setVisibleCount] = useState(12);
 
   // --- HELPER: Xử lý Tiếng Việt không dấu ---
   const removeVietnameseTones = (str: string) => {
@@ -170,7 +174,8 @@ const ThanhLoiMarketPage: React.FC<ThanhLoiMarketPageProps> = ({
                             })
                             .filter((item): item is MarketListing => item !== null);
                         
-                        allNewListings = [...allNewListings, ...foodItems];
+                        // REVERSE: Đảo ngược mảng để tin mới nhất (cuối CSV) lên đầu
+                        allNewListings = [...allNewListings, ...foodItems.reverse()];
                     }
                 }
             } catch (error) {
@@ -194,8 +199,6 @@ const ThanhLoiMarketPage: React.FC<ThanhLoiMarketPageProps> = ({
                         const idxLocation = getIndex(['diachi']);
                         const idxPhone = getIndex(['sdt']);
                         const idxImage = getIndex(['anhdaidien', 'anh', 'avatar']);
-                        // Thêm logic parse cột link_profile. 
-                        // Note: normalizeHeader sẽ xóa gạch dưới, nên ta tìm 'linkprofile'
                         const idxProfile = getIndex(['linkprofile', 'link_profile', 'profile', 'web']);
 
                         const serviceItems: MarketListing[] = rows.slice(1)
@@ -216,11 +219,12 @@ const ThanhLoiMarketPage: React.FC<ThanhLoiMarketPageProps> = ({
                                     isAd: false,
                                     timestamp: Date.now() + index + 100,
                                     type: 'service',
-                                    linkProfile: getCol(idxProfile) // Lấy link profile
+                                    linkProfile: getCol(idxProfile)
                                 };
                             });
 
-                         allNewListings = [...allNewListings, ...serviceItems];
+                         // REVERSE
+                         allNewListings = [...allNewListings, ...serviceItems.reverse()];
                     }
                 }
             } catch (error) {
@@ -228,7 +232,7 @@ const ThanhLoiMarketPage: React.FC<ThanhLoiMarketPageProps> = ({
             }
         }
 
-        // 3. Fetch Jobs Data (NEW)
+        // 3. Fetch Jobs Data
         if (SHEET_URLS.JOBS) {
             try {
                 const response = await fetch(SHEET_URLS.JOBS);
@@ -266,7 +270,8 @@ const ThanhLoiMarketPage: React.FC<ThanhLoiMarketPageProps> = ({
                                 };
                             });
 
-                         allNewListings = [...allNewListings, ...jobItems];
+                         // REVERSE
+                         allNewListings = [...allNewListings, ...jobItems.reverse()];
                     }
                 }
             } catch (error) {
@@ -274,8 +279,7 @@ const ThanhLoiMarketPage: React.FC<ThanhLoiMarketPageProps> = ({
             }
         }
         
-        // Lưu toàn bộ dữ liệu vào listings (để search)
-        // Chỉ lấy 12 item đầu tiên để hiển thị mặc định
+        // Lưu toàn bộ dữ liệu vào listings
         setListings(allNewListings);
         setIsLoading(false);
     };
@@ -301,14 +305,15 @@ const ThanhLoiMarketPage: React.FC<ThanhLoiMarketPageProps> = ({
   const handleSearch = () => {
     if (!searchTerm.trim()) {
         setIsSearching(false);
+        setVisibleCount(12); // Reset pagination on clear
         return;
     }
 
     setIsSearching(true);
+    setVisibleCount(12); // Reset pagination for search results
     const query = removeVietnameseTones(searchTerm);
 
     const results = listings.filter(item => {
-        // Tìm trong Tên, Người bán, Danh mục
         return removeVietnameseTones(item.title).includes(query) || 
                removeVietnameseTones(item.seller).includes(query) ||
                removeVietnameseTones(item.category).includes(query);
@@ -317,22 +322,28 @@ const ThanhLoiMarketPage: React.FC<ThanhLoiMarketPageProps> = ({
     setSearchResults(results);
   };
 
-  // Xử lý phím Enter
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
         handleSearch();
     }
   };
 
-  // Clear Search
   const clearSearch = () => {
       setSearchTerm("");
       setIsSearching(false);
       setSearchResults([]);
+      setVisibleCount(12);
   };
 
-  // List hiển thị: Nếu đang search thì dùng searchResults, không thì lấy 12 tin mới nhất
-  const displayListings = isSearching ? searchResults : listings.slice(0, 12);
+  // --- PAGINATION LOGIC (LOAD MORE) ---
+  const handleLoadMore = () => {
+      setVisibleCount(prev => prev + 12);
+  };
+
+  // Xác định nguồn dữ liệu đang hiển thị (Search hay List chính)
+  const currentSource = isSearching ? searchResults : listings;
+  // Cắt mảng theo visibleCount
+  const displayListings = currentSource.slice(0, visibleCount);
 
   return (
     <div className="bg-gray-50 min-h-screen font-sans text-gray-900">
@@ -355,9 +366,15 @@ const ThanhLoiMarketPage: React.FC<ThanhLoiMarketPageProps> = ({
             </div>
          </div>
          
-         <button className="bg-green-600 hover:bg-green-500 text-white px-4 py-2 rounded-full font-bold text-xs uppercase flex items-center gap-2 transition-colors shadow-lg shadow-green-900/20">
+         {/* Updated Post Button: Direct Link to Zalo */}
+         <a 
+            href="https://zalo.me/0386328473"
+            target="_blank"
+            rel="noreferrer"
+            className="bg-green-600 hover:bg-green-500 text-white px-4 py-2 rounded-full font-bold text-xs uppercase flex items-center gap-2 transition-colors shadow-lg shadow-green-900/20"
+         >
             <PlusCircle size={16} /> <span className="hidden md:inline">Đăng tin</span>
-         </button>
+         </a>
       </div>
 
       {/* 2. HERO SECTION */}
@@ -501,7 +518,13 @@ const ThanhLoiMarketPage: React.FC<ThanhLoiMarketPageProps> = ({
         {/* Grid Display */}
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
             {displayListings.map((item) => (
-                <div key={item.id} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-lg transition-shadow duration-300 group flex flex-col h-full">
+                <motion.div 
+                    key={item.id} 
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.3 }}
+                    className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-lg transition-shadow duration-300 group flex flex-col h-full"
+                >
                     
                     {/* --- POLYMORPHIC CARD UI --- */}
                     
@@ -630,14 +653,18 @@ const ThanhLoiMarketPage: React.FC<ThanhLoiMarketPageProps> = ({
                             </div>
                         </>
                     )}
-                </div>
+                </motion.div>
             ))}
         </div>
         
-        {!isSearching && (
+        {/* PAGINATION BUTTON (LOAD MORE) */}
+        {!isSearching && visibleCount < listings.length && (
             <div className="text-center mt-12">
-                <button className="bg-white border border-gray-300 text-gray-600 px-8 py-3 rounded-full font-bold text-sm hover:bg-gray-50 transition-colors">
-                    Xem thêm tin đăng
+                <button 
+                    onClick={handleLoadMore}
+                    className="group bg-white border border-gray-300 text-gray-600 px-8 py-3 rounded-full font-bold text-sm hover:bg-gray-50 hover:border-gray-400 hover:text-gray-900 transition-all flex items-center gap-2 mx-auto"
+                >
+                    Xem thêm tin đăng <ChevronDown size={16} className="group-hover:translate-y-1 transition-transform" />
                 </button>
             </div>
         )}
