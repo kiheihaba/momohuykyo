@@ -92,7 +92,8 @@ const ServiceListingPage: React.FC<ServiceListingPageProps> = ({ onBack }) => {
     const idxDesc = getIndex(['motangan', 'mota', 'description', 'skill']);
     const idxLocation = getIndex(['diachi', 'khuvuc', 'location', 'address']);
     const idxPhone = getIndex(['sdt', 'dienthoai', 'phone', 'contact']);
-    const idxProfile = getIndex(['link_profile', 'profile', 'facebook', 'web', 'trangcanhan']); // Cột Link Profile mới
+    // 'link_profile' -> 'linkprofile' sau khi normalize
+    const idxProfile = getIndex(['linkprofile', 'link_profile', 'profile', 'facebook', 'web', 'trangcanhan']); 
 
     // 3. Map dữ liệu
     return rows.slice(1)

@@ -19,7 +19,8 @@ import {
   Music,
   RefreshCw,
   XCircle,
-  AlertCircle
+  AlertCircle,
+  User
 } from 'lucide-react';
 import Footer from './Footer';
 
@@ -45,6 +46,7 @@ interface MarketListing {
   isAd?: boolean;
   timestamp?: number;
   type: 'food' | 'service' | 'job' | 'other'; // Để phân loại giao diện thẻ
+  linkProfile?: string; // Link Profile cho Service
 }
 
 // 1. CẤU HÌNH LINK GOOGLE SHEET (CSV)
@@ -192,6 +194,9 @@ const ThanhLoiMarketPage: React.FC<ThanhLoiMarketPageProps> = ({
                         const idxLocation = getIndex(['diachi']);
                         const idxPhone = getIndex(['sdt']);
                         const idxImage = getIndex(['anhdaidien', 'anh', 'avatar']);
+                        // Thêm logic parse cột link_profile. 
+                        // Note: normalizeHeader sẽ xóa gạch dưới, nên ta tìm 'linkprofile'
+                        const idxProfile = getIndex(['linkprofile', 'link_profile', 'profile', 'web']);
 
                         const serviceItems: MarketListing[] = rows.slice(1)
                             .filter(r => r.trim() !== '')
@@ -210,7 +215,8 @@ const ThanhLoiMarketPage: React.FC<ThanhLoiMarketPageProps> = ({
                                     phone: getCol(idxPhone),
                                     isAd: false,
                                     timestamp: Date.now() + index + 100,
-                                    type: 'service'
+                                    type: 'service',
+                                    linkProfile: getCol(idxProfile) // Lấy link profile
                                 };
                             });
 
@@ -552,9 +558,15 @@ const ThanhLoiMarketPage: React.FC<ThanhLoiMarketPageProps> = ({
                                      <a href={`tel:${item.phone}`} className="bg-green-600 text-white py-2 rounded text-xs font-bold uppercase flex items-center justify-center gap-1 hover:bg-green-500 transition-colors">
                                         <Phone size={14} /> Gọi Thợ
                                      </a>
-                                     <a href={`https://zalo.me/${item.phone}`} target="_blank" rel="noreferrer" className="bg-blue-600 text-white py-2 rounded text-xs font-bold uppercase flex items-center justify-center gap-1 hover:bg-blue-500 transition-colors">
-                                        <MessageCircle size={14} /> Zalo
-                                     </a>
+                                     {item.linkProfile ? (
+                                        <a href={item.linkProfile} target="_blank" rel="noreferrer" className="bg-blue-600 text-white py-2 rounded text-xs font-bold uppercase flex items-center justify-center gap-1 hover:bg-blue-500 transition-colors">
+                                            <User size={14} /> Xem Hồ Sơ
+                                        </a>
+                                     ) : (
+                                        <a href={`https://zalo.me/${item.phone}`} target="_blank" rel="noreferrer" className="bg-blue-600 text-white py-2 rounded text-xs font-bold uppercase flex items-center justify-center gap-1 hover:bg-blue-500 transition-colors">
+                                            <MessageCircle size={14} /> Zalo
+                                        </a>
+                                     )}
                                 </div>
                             </div>
                          </div>
