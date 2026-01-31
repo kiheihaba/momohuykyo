@@ -6,7 +6,7 @@ import {
   Search, 
   MapPin, 
   Phone, 
-  MessageCircle, 
+  ExternalLink,
   Wrench,
   Truck,
   Scissors,
@@ -14,12 +14,11 @@ import {
   PartyPopper,
   Grid,
   UserPlus,
-  Camera,
   RefreshCw,
   AlertCircle,
   User,
-  ExternalLink,
-  ChevronRight
+  Star,
+  CheckCircle2
 } from 'lucide-react';
 
 interface ServiceListingPageProps {
@@ -31,10 +30,11 @@ interface ServiceItem {
   category: string; // loai_dich_vu
   name: string; // ten_tho
   description: string; // mo_ta_ngan
-  location: string; // dia_chi
+  location: string; // dia_chi / khu_vuc
   phone: string; // sdt
   image: string; // anh_dai_dien
-  linkProfile: string; // link_profile (NEW)
+  linkProfile: string; // link_ho_so
+  isVerified: boolean; // xac_thuc
 }
 
 // URL Google Sheet CSV (Dịch vụ)
@@ -83,13 +83,14 @@ const ServiceListingPage: React.FC<ServiceListingPageProps> = ({ onBack }) => {
     };
 
     // Tìm cột dựa trên nhiều từ khóa (bao gồm loai_dich_vu)
-    const idxImage = getIndex(['anhdaidien', 'anh', 'avatar', 'hinh']);
-    const idxName = getIndex(['tentho', 'hoten', 'ten', 'name']);
+    const idxImage = getIndex(['anhdaidien', 'anh', 'avatar', 'hinh', 'anh_dai_dien']);
+    const idxName = getIndex(['tentho', 'hoten', 'ten', 'name', 'ten_tho']);
     const idxCategory = getIndex(['loaidichvu', 'loai_dich_vu', 'nghanhnghe', 'category']);
-    const idxDesc = getIndex(['motangan', 'mota', 'description', 'skill']);
-    const idxLocation = getIndex(['diachi', 'khuvuc', 'location', 'address']);
+    const idxDesc = getIndex(['motangan', 'mota', 'description', 'skill', 'mo_ta_ngan']);
+    const idxLocation = getIndex(['diachi', 'khuvuc', 'location', 'address', 'dia_chi']);
     const idxPhone = getIndex(['sdt', 'dienthoai', 'phone', 'contact']);
-    const idxProfile = getIndex(['linkprofile', 'link_profile', 'profile', 'facebook', 'web', 'trangcanhan']); 
+    const idxProfile = getIndex(['linkprofile', 'link_profile', 'profile', 'facebook', 'web', 'link_ho_so']); 
+    const idxVerified = getIndex(['xac_thuc', 'verified', 'status']);
 
     return rows.slice(1)
         .filter(r => r.trim() !== '')
@@ -97,15 +98,19 @@ const ServiceListingPage: React.FC<ServiceListingPageProps> = ({ onBack }) => {
             const cols = parseLine(row);
             const getCol = (idx: number) => (idx !== -1 && cols[idx]) ? cols[idx].trim() : "";
 
+            const verifiedStr = getCol(idxVerified).toLowerCase();
+            const isVerified = verifiedStr.includes('verified') || verifiedStr.includes('ok') || verifiedStr.includes('xac thuc');
+
             return {
                 id: `service-${index}`,
-                category: getCol(idxCategory) || "Khac", // Mặc định nếu thiếu category
+                category: getCol(idxCategory) || "Khac", 
                 name: getCol(idxName) || "Thợ Thạnh Lợi",
                 description: getCol(idxDesc) || "Liên hệ để biết thêm chi tiết",
                 location: getCol(idxLocation) || "Thạnh Lợi",
                 phone: getCol(idxPhone),
                 image: getCol(idxImage),
-                linkProfile: getCol(idxProfile)
+                linkProfile: getCol(idxProfile),
+                isVerified: isVerified
             };
         });
   };
@@ -132,8 +137,7 @@ const ServiceListingPage: React.FC<ServiceListingPageProps> = ({ onBack }) => {
 
   // --- LOGIC LỌC (FILTERING) ---
   const filteredServices = services.filter(item => {
-    // 1. Lọc theo Category (So sánh chính xác mã)
-    // Chuyển về lowercase để so sánh an toàn (VD: 'suachua' == 'SuaChua')
+    // 1. Lọc theo Category
     const itemCat = item.category.trim().toLowerCase();
     const activeCat = activeCategory.toLowerCase();
     const matchesCategory = activeCategory === "all" || itemCat === activeCat;
@@ -145,17 +149,16 @@ const ServiceListingPage: React.FC<ServiceListingPageProps> = ({ onBack }) => {
     return matchesCategory && matchesSearch;
   });
 
-  // Helper để lấy tên hiển thị đẹp cho badge category trên thẻ card
   const getCategoryDisplayName = (catCode: string) => {
       const found = serviceCategories.find(c => c.id.toLowerCase() === catCode.toLowerCase());
       return found ? found.name : catCode;
   };
 
   return (
-    <div className="fixed inset-0 z-[60] bg-[#050505] overflow-y-auto overflow-x-hidden custom-scrollbar text-white font-sans">
+    <div className="fixed inset-0 z-[60] bg-[#121212] overflow-y-auto overflow-x-hidden custom-scrollbar text-white font-sans">
       
       {/* 1. HEADER (Dark & Glass) */}
-      <div className="sticky top-0 z-50 bg-[#050505]/90 backdrop-blur-xl border-b border-gray-800 px-4 h-16 flex items-center gap-4 shadow-lg">
+      <div className="sticky top-0 z-50 bg-[#121212]/90 backdrop-blur-xl border-b border-gray-800 px-4 h-16 flex items-center gap-4 shadow-lg">
         <button 
           onClick={onBack}
           className="p-2 -ml-2 text-gray-400 hover:text-white hover:bg-white/10 rounded-full transition-colors"
@@ -170,45 +173,45 @@ const ServiceListingPage: React.FC<ServiceListingPageProps> = ({ onBack }) => {
         </div>
       </div>
 
-      {/* 2. SEARCH & FILTER (Premium Dark UI) */}
-      <div className="bg-[#050505]/95 pb-4 px-4 pt-4 shadow-xl sticky top-16 z-40 border-b border-gray-800">
+      {/* 2. SEARCH & FILTER */}
+      <div className="bg-[#121212]/95 pb-4 px-4 pt-4 shadow-xl sticky top-16 z-40 border-b border-gray-800">
          {/* Search */}
          <div className="relative mb-6">
              <input 
                 type="text" 
-                placeholder="Tìm thợ điện, xe ba gác..." 
-                className="w-full bg-white/5 border border-white/10 rounded-xl py-3.5 pl-11 pr-4 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-brand-cyan focus:ring-1 focus:ring-brand-cyan transition-all"
+                placeholder="Bạn đang tìm thợ gì? (VD: Sửa điện, Hớt tóc...)" 
+                className="w-full bg-[#1a1a1a] border border-gray-700 rounded-xl py-3.5 pl-11 pr-4 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-brand-cyan focus:ring-1 focus:ring-brand-cyan transition-all"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
              />
              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" size={18} />
          </div>
 
-         {/* Filter Tabs (Horizontal Scroll) */}
+         {/* Filter Tabs */}
          <div className="flex gap-3 overflow-x-auto scrollbar-hide pb-2">
             {serviceCategories.map((cat) => (
                 <button
                     key={cat.id}
                     onClick={() => setActiveCategory(cat.id)}
-                    className={`whitespace-nowrap flex items-center gap-2 px-5 py-2.5 rounded-full border text-xs font-bold uppercase tracking-wider transition-all duration-300 ${
+                    className={`whitespace-nowrap flex items-center gap-2 px-4 py-2.5 rounded-full border text-xs font-bold uppercase tracking-wider transition-all duration-300 ${
                         activeCategory === cat.id 
                         ? "bg-brand-cyan text-black border-brand-cyan shadow-[0_0_15px_rgba(0,255,255,0.4)] transform scale-105" 
-                        : "bg-transparent text-gray-400 border-white/10 hover:border-gray-500 hover:text-white"
+                        : "bg-transparent text-gray-400 border-gray-800 hover:border-gray-600 hover:text-white"
                     }`}
                 >
-                    {cat.icon}
+                    <span className="p-1 rounded-full bg-white/10">{cat.icon}</span>
                     {cat.name}
                 </button>
             ))}
          </div>
       </div>
 
-      {/* 3. SERVICE LISTING (Glassmorphism Cards) */}
-      <div className="max-w-3xl mx-auto px-4 py-8 space-y-6 pb-32">
+      {/* 3. SERVICE LISTING (Grid Layout) */}
+      <div className="max-w-5xl mx-auto px-4 py-8 space-y-6 pb-32">
         {isLoading && (
             <div className="flex flex-col items-center justify-center py-20 text-gray-500">
                 <RefreshCw className="animate-spin mb-4 text-brand-cyan" size={32} />
-                <p>Đang tìm kiếm thợ...</p>
+                <p>Đang tải dữ liệu thợ...</p>
             </div>
         )}
 
@@ -222,7 +225,7 @@ const ServiceListingPage: React.FC<ServiceListingPageProps> = ({ onBack }) => {
         {!isLoading && !error && filteredServices.length === 0 && (
             <div className="text-center py-20 text-gray-600">
                 <User size={48} className="mx-auto mb-4 opacity-20" />
-                <p>Chưa tìm thấy dịch vụ nào phù hợp trong mục này.</p>
+                <p>Chưa tìm thấy dịch vụ nào phù hợp.</p>
                 <button 
                     onClick={() => setActiveCategory('all')} 
                     className="mt-4 text-brand-cyan text-sm font-bold uppercase hover:underline"
@@ -232,139 +235,103 @@ const ServiceListingPage: React.FC<ServiceListingPageProps> = ({ onBack }) => {
             </div>
         )}
 
-        {!isLoading && !error && filteredServices.map((item, index) => (
-            <React.Fragment key={item.id}>
-                
-                {/* SPONSORED BANNER */}
-                {index === 2 && (
-                    <motion.div 
-                        initial={{ opacity: 0, scale: 0.95 }}
-                        whileInView={{ opacity: 1, scale: 1 }}
-                        viewport={{ once: true }}
-                        className="bg-gradient-to-r from-gray-900 to-black rounded-2xl p-5 border border-gray-800 relative overflow-hidden shadow-2xl my-8"
-                    >
-                        <div className="absolute top-0 right-0 w-40 h-40 bg-brand-cyan/10 blur-[50px] rounded-full"></div>
-                        <div className="relative z-10 flex items-center justify-between gap-4">
-                            <div>
-                                <span className="bg-brand-cyan text-black text-[10px] font-black px-2 py-0.5 uppercase mb-2 inline-block">Tài trợ</span>
-                                <h3 className="text-white font-black uppercase text-xl leading-tight mb-1">Rạp Cưới <br/> <span className="text-brand-cyan">Momo x HuyKyo</span></h3>
-                                <p className="text-gray-400 text-xs">Trang trí tiệc & Quay phim chuyên nghiệp</p>
-                            </div>
-                            <div className="flex flex-col gap-2">
-                                    <button className="bg-white text-black text-xs font-bold px-4 py-2.5 rounded-lg flex items-center gap-1 hover:bg-brand-cyan transition-colors">
-                                    <Camera size={14} /> Xem mẫu
-                                    </button>
-                            </div>
-                        </div>
-                    </motion.div>
-                )}
-
-                {/* SERVICE CARD (Premium Glassmorphism) */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {!isLoading && !error && filteredServices.map((item, index) => (
                 <motion.div
-                    initial={{ opacity: 0, y: 30 }}
+                    key={item.id}
+                    initial={{ opacity: 0, y: 20 }}
                     whileInView={{ opacity: 1, y: 0 }}
-                    whileHover={{ scale: 1.02 }}
+                    whileHover={{ y: -5 }}
                     viewport={{ once: true }}
-                    transition={{ type: "spring", stiffness: 200, damping: 20 }}
-                    className="group bg-[#1e1e1e]/80 backdrop-blur-md rounded-2xl p-5 border border-white/5 hover:border-brand-cyan/50 hover:shadow-[0_0_20px_rgba(0,255,255,0.1)] transition-all duration-300 relative overflow-hidden"
+                    transition={{ duration: 0.3, delay: index * 0.05 }}
+                    className="flex flex-col h-full bg-[#1a1a1a] border border-gray-800 hover:border-brand-cyan hover:shadow-[0_0_15px_rgba(0,255,255,0.2)] rounded-2xl p-5 transition-all duration-300 relative group"
                 >
-                    <div className="flex flex-row items-start gap-4">
-                        
-                        {/* Left: Avatar with Neon Glow */}
-                        <div className="flex-shrink-0 relative">
-                             <div className="w-20 h-20 rounded-full p-[2px] bg-gradient-to-br from-brand-cyan to-purple-600 shadow-[0_0_15px_rgba(0,255,255,0.3)]">
-                                <div className="w-full h-full rounded-full overflow-hidden bg-gray-900">
-                                    {item.image && item.image.length > 5 ? (
-                                        <img 
-                                            src={item.image} 
-                                            alt={item.name} 
-                                            className="w-full h-full object-cover"
-                                            onError={(e) => { 
-                                                e.currentTarget.style.display = 'none';
-                                                e.currentTarget.parentElement?.querySelector('.fallback-icon')?.classList.remove('hidden');
-                                            }}
-                                        />
-                                    ) : null}
-                                    <div className={`fallback-icon absolute inset-0 flex items-center justify-center bg-gray-800 text-gray-500 font-bold text-2xl uppercase ${item.image && item.image.length > 5 ? 'hidden' : ''}`}>
-                                        {item.name ? item.name.charAt(0) : <User size={30} />}
-                                    </div>
+                    
+                    {/* PART 1: HEADER (Info) */}
+                    <div className="flex items-center gap-4 mb-4">
+                        {/* Avatar */}
+                        <div className="relative shrink-0">
+                            <div className="w-14 h-14 rounded-full p-[2px] bg-gradient-to-br from-brand-cyan to-blue-600">
+                                <div className="w-full h-full rounded-full overflow-hidden bg-black">
+                                    <img 
+                                        src={item.image} 
+                                        alt={item.name} 
+                                        className="w-full h-full object-cover"
+                                        onError={(e) => {
+                                            (e.target as HTMLImageElement).src = "https://placehold.co/100x100/333/FFF?text=" + item.name.charAt(0);
+                                        }}
+                                    />
                                 </div>
-                             </div>
-                             {/* Online Dot */}
-                             <div className="absolute bottom-1 right-1 w-4 h-4 bg-green-500 border-2 border-[#1e1e1e] rounded-full"></div>
+                            </div>
+                            {item.isVerified && (
+                                <div className="absolute -bottom-1 -right-1 bg-white rounded-full p-0.5" title="Đã xác thực">
+                                    <CheckCircle2 size={14} className="text-blue-600 fill-blue-100" />
+                                </div>
+                            )}
                         </div>
 
-                        {/* Right: Info */}
-                        <div className="flex-1 min-w-0">
-                             {/* Name */}
-                             <h3 className="font-bold text-white text-lg leading-tight truncate mb-1.5 group-hover:text-brand-cyan transition-colors">
+                        {/* Name & Badge */}
+                        <div className="min-w-0">
+                            <h3 className="text-brand-cyan font-bold text-lg truncate leading-tight">
                                 {item.name}
-                             </h3>
-                             
-                             {/* Badge Category (Display Name) */}
-                             <span className="inline-block bg-gradient-to-r from-cyan-900/50 to-purple-900/50 border border-white/10 text-brand-cyan text-[10px] font-bold px-2 py-0.5 rounded-md uppercase tracking-wide mb-2">
+                            </h3>
+                            <span className="inline-block mt-1 bg-gradient-to-r from-purple-900 to-indigo-900 text-purple-200 text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider border border-purple-500/30">
                                 {getCategoryDisplayName(item.category)}
-                             </span>
-
-                             {/* Description */}
-                             <p className="text-gray-400 text-xs leading-relaxed line-clamp-2 mb-3">
-                                {item.description}
-                             </p>
-
-                             {/* Location */}
-                             <div className="flex items-center gap-1 text-xs text-gray-500">
-                                <MapPin size={12} className="text-red-500" /> 
-                                <span className="truncate">{item.location}</span>
-                             </div>
+                            </span>
                         </div>
                     </div>
 
-                    {/* Action Buttons (Horizontal Layout) */}
-                    <div className="grid grid-cols-2 gap-3 mt-5 pt-4 border-t border-white/10">
+                    {/* PART 2: BODY (Description) */}
+                    <div className="flex-grow mb-4">
+                        <p className="text-gray-300 text-sm line-clamp-2 mb-3 h-[2.5em] leading-relaxed">
+                            {item.description}
+                        </p>
+                        <div className="flex items-center gap-2 text-xs text-gray-500">
+                            <MapPin size={14} className="text-red-500 shrink-0" />
+                            <span className="truncate">{item.location}</span>
+                        </div>
+                    </div>
+
+                    {/* Divider */}
+                    <div className="border-t border-white/10 mb-4"></div>
+
+                    {/* PART 3: ACTION FOOTER */}
+                    <div className={`grid gap-3 ${item.linkProfile ? 'grid-cols-2' : 'grid-cols-1'}`}>
+                        {/* Call Button (Always Show) */}
                         <a 
                             href={`tel:${item.phone}`}
-                            className="group/btn flex items-center justify-center gap-2 bg-gradient-to-r from-green-600 to-emerald-600 text-white py-3 rounded-xl text-xs font-bold uppercase hover:shadow-[0_0_15px_rgba(34,197,94,0.4)] transition-all active:scale-95"
+                            className="bg-[#00C853] hover:bg-[#00E676] text-white py-3 rounded-xl text-xs font-bold uppercase flex items-center justify-center gap-2 transition-all shadow-[0_4px_10px_rgba(0,200,83,0.3)] active:scale-95"
                         >
-                            <Phone size={16} className="group-hover/btn:animate-pulse" /> 
-                            Gọi Ngay
+                            <Phone size={16} fill="currentColor" /> Gọi Ngay
                         </a>
 
-                        {item.linkProfile ? (
+                        {/* View Profile Button (Conditional) */}
+                        {item.linkProfile && (
                             <a 
                                 href={item.linkProfile}
                                 target="_blank"
                                 rel="noreferrer"
-                                className="flex items-center justify-center gap-2 bg-transparent border border-brand-cyan text-brand-cyan py-3 rounded-xl text-xs font-bold uppercase hover:bg-brand-cyan hover:text-black transition-all active:scale-95"
+                                className="bg-transparent border border-brand-cyan text-brand-cyan hover:bg-brand-cyan hover:text-black py-3 rounded-xl text-xs font-bold uppercase flex items-center justify-center gap-2 transition-all active:scale-95"
                             >
                                 Xem Hồ Sơ <ExternalLink size={16} />
-                            </a>
-                        ) : (
-                            <a 
-                                href={`https://zalo.me/${item.phone}`}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="flex items-center justify-center gap-2 bg-transparent border border-blue-500 text-blue-400 py-3 rounded-xl text-xs font-bold uppercase hover:bg-blue-600 hover:text-white transition-all active:scale-95"
-                            >
-                                Chat Zalo <MessageCircle size={16} />
                             </a>
                         )}
                     </div>
 
                 </motion.div>
-
-            </React.Fragment>
-        ))}
+            ))}
+        </div>
       </div>
 
       {/* 4. FOOTER CTA */}
-      <div className="fixed bottom-0 left-0 right-0 bg-[#050505]/95 backdrop-blur-md border-t border-gray-800 p-4 pb-6 z-50">
+      <div className="fixed bottom-0 left-0 right-0 bg-[#121212]/95 backdrop-blur-md border-t border-gray-800 p-4 pb-6 z-50">
          <a 
             href="https://zalo.me/0386328473" 
             target="_blank" 
             rel="noreferrer"
             className="flex items-center justify-center gap-2 w-full bg-white text-black py-3.5 rounded-xl font-black uppercase tracking-wider hover:bg-brand-cyan transition-colors shadow-lg"
          >
-             <UserPlus size={20} /> Đăng ký làm thợ / Đối tác
+             <UserPlus size={20} /> Đăng ký làm thợ
          </a>
       </div>
 
