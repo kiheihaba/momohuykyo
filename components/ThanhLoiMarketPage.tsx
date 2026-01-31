@@ -66,7 +66,13 @@ const categories = [
   { id: 1, name: "Ẩm Thực", icon: <Utensils size={24} />, color: "bg-orange-100 text-orange-600" },
   { id: 2, name: "Dịch Vụ", icon: <Wrench size={24} />, color: "bg-blue-100 text-blue-600" },
   { id: 3, name: "Việc Làm", icon: <Briefcase size={24} />, color: "bg-green-100 text-green-600" }, 
-  { id: 4, name: "Shop Online", icon: <Star size={24} />, color: "bg-pink-100 text-pink-600" },
+  { 
+    id: 4, 
+    name: "Shop Online cả nước", 
+    icon: <Star size={24} />, 
+    color: "bg-pink-100 text-pink-600",
+    subtitle: "(GIAO THƯƠNG ALL VIỆT NAM)"
+  },
   { id: 5, name: "Xe Cộ", icon: <Car size={24} />, color: "bg-red-100 text-red-600" },
   { id: 6, name: "Bất động sản", icon: <Home size={24} />, color: "bg-purple-100 text-purple-600" },
   { id: 7, name: "Chợ Mua Sắm", icon: <ShoppingBag size={24} />, color: "bg-teal-100 text-teal-600" },
@@ -302,7 +308,7 @@ const ThanhLoiMarketPage: React.FC<ThanhLoiMarketPageProps> = ({
         onOpenJobs();
     } else if (catName === "Bất động sản" && onOpenRealEstate) {
         onOpenRealEstate();
-    } else if (catName === "Shop Online" && onOpenFashion) {
+    } else if (catName === "Shop Online cả nước" && onOpenFashion) {
         onOpenFashion();
     } else if (catName === "Xe Cộ" && onOpenVehicles) {
         onOpenVehicles();
@@ -447,12 +453,17 @@ const ThanhLoiMarketPage: React.FC<ThanhLoiMarketPageProps> = ({
                         key={cat.id}
                         whileHover={{ y: -5 }}
                         onClick={() => handleCategoryClick(cat.name)}
-                        className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex flex-col items-center justify-center gap-3 cursor-pointer hover:shadow-md transition-all"
+                        className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex flex-col items-center justify-center gap-3 cursor-pointer hover:shadow-md transition-all text-center h-full"
                     >
                         <div className={`p-3 rounded-full ${cat.color}`}>
                             {cat.icon}
                         </div>
-                        <span className="text-sm font-semibold text-gray-700">{cat.name}</span>
+                        <div>
+                            <span className="text-sm font-semibold text-gray-700 block leading-tight">{cat.name}</span>
+                            {(cat as any).subtitle && (
+                                <span className="text-[9px] font-bold text-red-500 mt-1 block tracking-tight">{(cat as any).subtitle}</span>
+                            )}
+                        </div>
                     </motion.div>
                 ))}
             </div>
