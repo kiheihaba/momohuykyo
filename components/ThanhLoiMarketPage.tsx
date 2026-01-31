@@ -63,19 +63,19 @@ const SHEET_URLS = {
 
 // Dữ liệu danh mục
 const categories = [
-  { id: 1, name: "Ẩm Thực", icon: <Utensils size={24} />, color: "bg-orange-100 text-orange-600" },
-  { id: 2, name: "Dịch Vụ", icon: <Wrench size={24} />, color: "bg-blue-100 text-blue-600" },
-  { id: 3, name: "Việc Làm", icon: <Briefcase size={24} />, color: "bg-green-100 text-green-600" }, 
+  { id: 1, name: "Chợ Mua Sắm", icon: <ShoppingBag size={24} />, color: "bg-teal-100 text-teal-600" },
+  { id: 2, name: "Ẩm Thực", icon: <Utensils size={24} />, color: "bg-orange-100 text-orange-600" },
+  { id: 3, name: "Dịch Vụ", icon: <Wrench size={24} />, color: "bg-blue-100 text-blue-600" },
+  { id: 4, name: "Việc Làm", icon: <Briefcase size={24} />, color: "bg-green-100 text-green-600" }, 
   { 
-    id: 4, 
+    id: 5, 
     name: "KYO MALL", 
     icon: <Star size={24} />, 
     color: "bg-pink-100 text-pink-600",
     subtitle: "(Giao thương All Vietnam)"
   },
-  { id: 5, name: "Xe Cộ", icon: <Car size={24} />, color: "bg-red-100 text-red-600" },
-  { id: 6, name: "Bất động sản", icon: <Home size={24} />, color: "bg-purple-100 text-purple-600" },
-  { id: 7, name: "Chợ Mua Sắm", icon: <ShoppingBag size={24} />, color: "bg-teal-100 text-teal-600" },
+  { id: 6, name: "Xe Cộ", icon: <Car size={24} />, color: "bg-red-100 text-red-600" },
+  { id: 7, name: "Bất động sản", icon: <Home size={24} />, color: "bg-purple-100 text-purple-600" },
 ];
 
 const ThanhLoiMarketPage: React.FC<ThanhLoiMarketPageProps> = ({ 
