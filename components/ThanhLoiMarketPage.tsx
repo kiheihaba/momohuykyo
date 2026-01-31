@@ -68,10 +68,10 @@ const categories = [
   { id: 3, name: "Việc Làm", icon: <Briefcase size={24} />, color: "bg-green-100 text-green-600" }, 
   { 
     id: 4, 
-    name: "Shop Online cả nước", 
+    name: "KYO MALL", 
     icon: <Star size={24} />, 
     color: "bg-pink-100 text-pink-600",
-    subtitle: "(GIAO THƯƠNG ALL VIỆT NAM)"
+    subtitle: "(Giao thương All Vietnam)"
   },
   { id: 5, name: "Xe Cộ", icon: <Car size={24} />, color: "bg-red-100 text-red-600" },
   { id: 6, name: "Bất động sản", icon: <Home size={24} />, color: "bg-purple-100 text-purple-600" },
@@ -308,7 +308,7 @@ const ThanhLoiMarketPage: React.FC<ThanhLoiMarketPageProps> = ({
         onOpenJobs();
     } else if (catName === "Bất động sản" && onOpenRealEstate) {
         onOpenRealEstate();
-    } else if (catName === "Shop Online cả nước" && onOpenFashion) {
+    } else if (catName === "KYO MALL" && onOpenFashion) {
         onOpenFashion();
     } else if (catName === "Xe Cộ" && onOpenVehicles) {
         onOpenVehicles();
@@ -470,38 +470,84 @@ const ThanhLoiMarketPage: React.FC<ThanhLoiMarketPageProps> = ({
         </section>
       )}
 
-      {/* 4. AD BANNER (Ẩn khi đang Search) */}
+      {/* 4. BRAND BANNER (Feature Section - Redesigned) */}
       {!isSearching && (
           <section className="max-w-7xl mx-auto px-4 mb-10">
-            <div className="bg-[#121212] rounded-2xl overflow-hidden relative flex flex-col md:flex-row items-center border border-gray-800">
-                <div className="absolute top-0 right-0 w-64 h-64 bg-brand-cyan/20 blur-[80px] rounded-full pointer-events-none"></div>
+            <div className="relative bg-[#050505] rounded-3xl overflow-hidden border border-gray-800 min-h-[400px] flex items-center justify-center text-center p-8 md:p-12">
                 
-                <div className="w-full md:w-1/2 p-8 md:p-12 z-10">
-                    <div className="inline-block bg-brand-cyan text-black text-xs font-black px-2 py-1 uppercase mb-4">
-                        Dịch vụ nổi bật
-                    </div>
-                    <h3 className="text-2xl md:text-3xl font-black text-white uppercase mb-4">
-                        Rạp Cưới & Media <br/> <span className="text-brand-cyan">Trọn Gói</span>
-                    </h3>
-                    <p className="text-gray-400 mb-6 text-sm md:text-base">
-                        Momo x HuyKyo cung cấp dịch vụ trang trí tiệc cưới, quay phim chụp ảnh sự kiện với phong cách hiện đại nhất tại Thạnh Lợi.
-                    </p>
-                    <div className="flex gap-4">
-                        <button className="bg-white text-black px-6 py-2 rounded-full font-bold text-sm hover:bg-brand-cyan transition-colors flex items-center gap-2">
-                            <Camera size={16} /> Xem mẫu rạp
-                        </button>
-                        <button className="border border-gray-600 text-white px-6 py-2 rounded-full font-bold text-sm hover:border-brand-cyan hover:text-brand-cyan transition-colors flex items-center gap-2">
-                            <Music size={16} /> Thuê âm thanh
-                        </button>
-                    </div>
+                {/* Background Effects */}
+                <div className="absolute inset-0 z-0">
+                     {/* Cyberpunk Grid */}
+                     <div className="absolute inset-0 bg-[linear-gradient(to_right,#1f1f1f_1px,transparent_1px),linear-gradient(to_bottom,#1f1f1f_1px,transparent_1px)] bg-[size:2rem_2rem] opacity-20"></div>
+                     
+                     {/* Glows */}
+                     <div className="absolute top-0 left-1/4 w-64 h-64 bg-purple-600/20 blur-[100px] rounded-full"></div>
+                     <div className="absolute bottom-0 right-1/4 w-64 h-64 bg-brand-cyan/20 blur-[100px] rounded-full"></div>
+
+                     {/* Capybara Image - Floating/Blended */}
+                     <img 
+                        src="https://i.postimg.cc/TYspgn7T/Gemini-Generated-Image-bsnchxbsnchxbsnc.png" 
+                        alt="Capybara VR" 
+                        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[80%] md:w-[40%] object-contain opacity-10 mix-blend-screen" 
+                     />
                 </div>
-                <div className="w-full md:w-1/2 h-48 md:h-full relative overflow-hidden">
-                    <img 
-                        src="https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&q=80&w=800" 
-                        alt="Wedding Decor" 
-                        className="w-full h-full object-cover opacity-80"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-l from-transparent to-[#121212]"></div>
+
+                {/* Content */}
+                <div className="relative z-10 max-w-4xl mx-auto">
+                    {/* Badge */}
+                    <motion.div 
+                        initial={{ opacity: 0, y: 20 }}
+                        whileInView={{ opacity: 1, y: 0 }}
+                        viewport={{ once: true }}
+                        className="inline-block mb-6"
+                    >
+                        <span className="bg-brand-cyan/10 border border-brand-cyan/30 text-brand-cyan text-[10px] md:text-xs font-black tracking-[0.2em] px-4 py-2 rounded-full uppercase backdrop-blur-md shadow-[0_0_15px_rgba(0,255,255,0.3)]">
+                            Future of Solopreneur
+                        </span>
+                    </motion.div>
+
+                    {/* Headline */}
+                    <motion.h3 
+                        initial={{ opacity: 0, scale: 0.9 }}
+                        whileInView={{ opacity: 1, scale: 1 }}
+                        viewport={{ once: true }}
+                        transition={{ delay: 0.1 }}
+                        className="text-3xl md:text-5xl lg:text-6xl font-black uppercase tracking-tighter mb-6 leading-none"
+                    >
+                        <span className="text-transparent bg-clip-text bg-gradient-to-b from-white via-gray-200 to-gray-500 drop-shadow-2xl">
+                            Tiên phong Kỷ nguyên
+                        </span>
+                        <br />
+                        <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-cyan via-white to-brand-cyan text-glow">
+                            Nội dung số & AI
+                        </span>
+                    </motion.h3>
+
+                    {/* Sub-headline */}
+                    <motion.p 
+                        initial={{ opacity: 0 }}
+                        whileInView={{ opacity: 1 }}
+                        viewport={{ once: true }}
+                        transition={{ delay: 0.2 }}
+                        className="text-gray-400 text-sm md:text-lg mb-8 max-w-2xl mx-auto font-light leading-relaxed"
+                    >
+                        Hệ sinh thái đa dạng từ giải trí, giáo dục đến thời trang phong cách sống dành cho <span className="text-white font-bold">Gen Z</span>.
+                    </motion.p>
+
+                    {/* CTA */}
+                    <motion.button 
+                        initial={{ opacity: 0, y: 20 }}
+                        whileInView={{ opacity: 1, y: 0 }}
+                        viewport={{ once: true }}
+                        transition={{ delay: 0.3 }}
+                        onClick={onBack}
+                        className="group relative px-8 py-3 bg-transparent overflow-hidden rounded-full border border-brand-cyan/50 text-white font-bold uppercase tracking-widest hover:border-brand-cyan transition-all"
+                    >
+                        <div className="absolute inset-0 w-0 bg-brand-cyan/20 transition-all duration-[250ms] ease-out group-hover:w-full"></div>
+                        <span className="relative flex items-center gap-2">
+                            Khám phá Hệ sinh thái <ArrowLeft className="rotate-180" size={18} />
+                        </span>
+                    </motion.button>
                 </div>
             </div>
           </section>
