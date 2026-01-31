@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { 
   ArrowLeft, 
   Search, 
@@ -18,7 +18,10 @@ import {
   AlertCircle,
   User,
   Star,
-  CheckCircle2
+  CheckCircle2,
+  X,
+  MessageCircle,
+  Globe
 } from 'lucide-react';
 
 interface ServiceListingPageProps {
@@ -56,6 +59,9 @@ const ServiceListingPage: React.FC<ServiceListingPageProps> = ({ onBack }) => {
   const [services, setServices] = useState<ServiceItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  
+  // State cho Modal
+  const [selectedService, setSelectedService] = useState<ServiceItem | null>(null);
 
   // --- LOGIC DỮ LIỆU ---
   const normalizeHeader = (str: string) => {
@@ -239,12 +245,13 @@ const ServiceListingPage: React.FC<ServiceListingPageProps> = ({ onBack }) => {
             {!isLoading && !error && filteredServices.map((item, index) => (
                 <motion.div
                     key={item.id}
+                    onClick={() => setSelectedService(item)} // OPEN MODAL
                     initial={{ opacity: 0, y: 20 }}
                     whileInView={{ opacity: 1, y: 0 }}
                     whileHover={{ y: -5 }}
                     viewport={{ once: true }}
                     transition={{ duration: 0.3, delay: index * 0.05 }}
-                    className="flex flex-col h-full bg-[#1a1a1a] border border-gray-800 hover:border-brand-cyan hover:shadow-[0_0_15px_rgba(0,255,255,0.2)] rounded-2xl p-5 transition-all duration-300 relative group"
+                    className="flex flex-col h-full bg-[#1a1a1a] border border-gray-800 hover:border-brand-cyan hover:shadow-[0_0_15px_rgba(0,255,255,0.2)] rounded-2xl p-5 transition-all duration-300 relative group cursor-pointer"
                 >
                     
                     {/* PART 1: HEADER (Info) */}
@@ -300,6 +307,7 @@ const ServiceListingPage: React.FC<ServiceListingPageProps> = ({ onBack }) => {
                         {/* Call Button (Always Show) */}
                         <a 
                             href={`tel:${item.phone}`}
+                            onClick={(e) => e.stopPropagation()}
                             className="bg-[#00C853] hover:bg-[#00E676] text-white py-3 rounded-xl text-xs font-bold uppercase flex items-center justify-center gap-2 transition-all shadow-[0_4px_10px_rgba(0,200,83,0.3)] active:scale-95"
                         >
                             <Phone size={16} fill="currentColor" /> Gọi Ngay
@@ -311,6 +319,7 @@ const ServiceListingPage: React.FC<ServiceListingPageProps> = ({ onBack }) => {
                                 href={item.linkProfile}
                                 target="_blank"
                                 rel="noreferrer"
+                                onClick={(e) => e.stopPropagation()}
                                 className="bg-transparent border border-brand-cyan text-brand-cyan hover:bg-brand-cyan hover:text-black py-3 rounded-xl text-xs font-bold uppercase flex items-center justify-center gap-2 transition-all active:scale-95"
                             >
                                 Xem Hồ Sơ <ExternalLink size={16} />
@@ -334,6 +343,118 @@ const ServiceListingPage: React.FC<ServiceListingPageProps> = ({ onBack }) => {
              <UserPlus size={20} /> Đăng ký làm thợ
          </a>
       </div>
+
+      {/* 5. SERVICE DETAIL MODAL (POPUP) */}
+      <AnimatePresence>
+        {selectedService && (
+            <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="fixed inset-0 z-[70] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4"
+                onClick={() => setSelectedService(null)}
+            >
+                <motion.div
+                    initial={{ scale: 0.9, y: 20 }}
+                    animate={{ scale: 1, y: 0 }}
+                    exit={{ scale: 0.9, y: 20 }}
+                    className="bg-[#1a1a1a] w-full max-w-md rounded-2xl border border-gray-700 overflow-hidden relative shadow-2xl"
+                    onClick={(e) => e.stopPropagation()}
+                >
+                    {/* Close Button */}
+                    <button 
+                        onClick={() => setSelectedService(null)}
+                        className="absolute top-4 right-4 z-10 p-2 bg-black/50 text-white rounded-full hover:bg-brand-cyan hover:text-black transition-colors"
+                    >
+                        <X size={20} />
+                    </button>
+
+                    {/* Modal Content */}
+                    <div className="flex flex-col max-h-[85vh] overflow-y-auto custom-scrollbar">
+                        
+                        {/* Header: Cover & Avatar */}
+                        <div className="relative pt-8 pb-4 bg-gradient-to-b from-gray-800 to-[#1a1a1a] flex flex-col items-center">
+                            <div className="w-24 h-24 rounded-full p-[3px] bg-gradient-to-br from-brand-cyan to-blue-600 shadow-[0_0_20px_rgba(0,255,255,0.2)] mb-3">
+                                <div className="w-full h-full rounded-full overflow-hidden bg-black">
+                                    <img 
+                                        src={selectedService.image} 
+                                        alt={selectedService.name} 
+                                        className="w-full h-full object-cover"
+                                        onError={(e) => {
+                                            (e.target as HTMLImageElement).src = "https://placehold.co/150x150/333/FFF?text=" + selectedService.name.charAt(0);
+                                        }}
+                                    />
+                                </div>
+                            </div>
+                            
+                            <h2 className="text-2xl font-black text-white text-center px-4 leading-tight mb-1">
+                                {selectedService.name}
+                            </h2>
+                            
+                            <div className="flex items-center gap-2 mb-4">
+                                {selectedService.isVerified && (
+                                    <span className="flex items-center gap-1 bg-green-900/40 text-green-400 text-[10px] font-bold px-2 py-0.5 rounded-full border border-green-500/30">
+                                        <CheckCircle2 size={12} /> XÁC THỰC
+                                    </span>
+                                )}
+                                <span className="bg-brand-cyan/10 text-brand-cyan text-[10px] font-bold px-2 py-0.5 rounded-full border border-brand-cyan/20 uppercase">
+                                    {getCategoryDisplayName(selectedService.category)}
+                                </span>
+                            </div>
+                        </div>
+
+                        {/* Body: Info */}
+                        <div className="p-6 pt-2">
+                             {/* Location */}
+                            <div className="flex items-center justify-center gap-2 text-sm text-gray-400 mb-6 pb-6 border-b border-gray-800">
+                                <MapPin size={16} className="text-red-500" />
+                                <span>{selectedService.location}</span>
+                            </div>
+
+                            <div className="space-y-4">
+                                <div>
+                                    <h4 className="text-brand-cyan font-bold text-xs uppercase mb-2">Giới thiệu & Kỹ năng</h4>
+                                    <p className="text-gray-300 text-sm leading-relaxed whitespace-pre-line">
+                                        {selectedService.description}
+                                    </p>
+                                </div>
+                            </div>
+
+                            {/* Actions */}
+                            <div className="mt-8 grid grid-cols-2 gap-3">
+                                <a 
+                                    href={`tel:${selectedService.phone}`}
+                                    className="col-span-1 bg-[#00C853] hover:bg-[#00E676] text-white py-3.5 rounded-xl text-sm font-bold uppercase flex items-center justify-center gap-2 transition-all shadow-lg active:scale-95"
+                                >
+                                    <Phone size={18} fill="currentColor" /> Gọi Ngay
+                                </a>
+                                <a 
+                                    href={`https://zalo.me/${selectedService.phone}`}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="col-span-1 bg-blue-600 hover:bg-blue-500 text-white py-3.5 rounded-xl text-sm font-bold uppercase flex items-center justify-center gap-2 transition-all shadow-lg active:scale-95"
+                                >
+                                    <MessageCircle size={18} /> Zalo
+                                </a>
+                                
+                                {selectedService.linkProfile && (
+                                    <a 
+                                        href={selectedService.linkProfile}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        className="col-span-2 bg-gray-800 hover:bg-gray-700 text-brand-cyan border border-gray-700 hover:border-brand-cyan py-3 rounded-xl text-sm font-bold uppercase flex items-center justify-center gap-2 transition-all mt-2"
+                                    >
+                                        <Globe size={18} /> Xem Hồ Sơ Chi Tiết <ExternalLink size={14} />
+                                    </a>
+                                )}
+                            </div>
+                        </div>
+
+                    </div>
+                </motion.div>
+            </motion.div>
+        )}
+      </AnimatePresence>
 
     </div>
   );
