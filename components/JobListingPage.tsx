@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { 
   ArrowLeft, 
   Search, 
@@ -17,7 +17,13 @@ import {
   MonitorPlay,
   RefreshCw,
   AlertCircle,
-  Megaphone
+  Megaphone,
+  DollarSign,
+  Info,
+  X,
+  User,
+  Building2,
+  CheckCircle2
 } from 'lucide-react';
 
 interface JobListingPageProps {
@@ -30,37 +36,36 @@ interface JobItem {
   salary: string;      // muc_luong
   employer: string;    // nguoi_tuyen
   location: string;    // dia_diem
-  requirement: string; // yeu_cau
-  postedTime: string;  // ngay_dang (hoặc auto generated)
-  category: string;    // phan_loai (optional)
+  requirement: string; // yeu_cau / mo_ta
+  postedTime: string;  // ngay_dang
+  category: string;    // phan_loai
   phone: string;       // sdt_lien_he
+  image: string;       // anh_dai_dien
   isUrgent: boolean;   // loai_tin == 'Gap'
 }
 
 // Link CSV Google Sheet Việc Làm
 const SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRJrotBdzd-po6z_Zd6fbew0pqGgdDdZjRMf7vutpfJia2aFpNyTZNdvGZxN4MfcGtRwJWUrmICvZMF/pub?gid=1687973723&single=true&output=csv";
 
-// Danh mục việc làm (Icons minh họa)
-const jobCategories = [
-  { id: "all", name: "Tất cả", icon: <Briefcase size={18} />, color: "bg-gray-100 text-gray-700" },
-  { id: "Lao động", name: "Lao động", icon: <Hammer size={18} />, color: "bg-orange-100 text-orange-700" },
-  { id: "Phục vụ", name: "Phục vụ", icon: <Coffee size={18} />, color: "bg-blue-100 text-blue-700" },
-  { id: "Nông nghiệp", name: "Nông nghiệp", icon: <Wheat size={18} />, color: "bg-green-100 text-green-700" },
-  { id: "Giao hàng", name: "Shipper", icon: <Truck size={18} />, color: "bg-yellow-100 text-yellow-700" },
+// Danh mục lọc nhanh
+const quickFilters = [
+  { id: "all", label: "Tất cả" },
+  { id: "urgent", label: "🔥 Tuyển gấp" },
+  { id: "high_salary", label: "💰 Lương cao" },
+  { id: "part_time", label: "Ca gãy/Part-time" },
 ];
 
 const JobListingPage: React.FC<JobListingPageProps> = ({ onBack }) => {
-  const [activeCategory, setActiveCategory] = useState("all");
+  const [activeFilter, setActiveFilter] = useState("all");
   const [searchTerm, setSearchTerm] = useState("");
   const [jobs, setJobs] = useState<JobItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [selectedJob, setSelectedJob] = useState<JobItem | null>(null);
 
-  // Hàm Parser CSV mạnh mẽ
+  // --- PARSE CSV DATA ---
   const parseCSV = (text: string): JobItem[] => {
     const rows = text.split('\n');
     
-    // Regex split by comma ignoring quotes
     const parseLine = (line: string): string[] => {
         const parts = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
         return parts.map(part => {
@@ -72,21 +77,19 @@ const JobListingPage: React.FC<JobListingPageProps> = ({ onBack }) => {
 
     if (rows.length < 2) return [];
 
-    // 1. Detect Headers
     const headers = parseLine(rows[0]);
-    const getIndex = (key: string) => headers.findIndex(h => h.toLowerCase().trim() === key.toLowerCase().trim());
+    const getIndex = (keys: string[]) => headers.findIndex(h => keys.includes(h.toLowerCase().trim()));
 
-    // 2. Map Columns (Ánh xạ theo yêu cầu)
-    const idxTitle = getIndex('tieu_de') !== -1 ? getIndex('tieu_de') : getIndex('cong_viec');
-    const idxSalary = getIndex('muc_luong');
-    const idxEmployer = getIndex('nguoi_tuyen');
-    const idxLocation = getIndex('dia_diem') !== -1 ? getIndex('dia_diem') : getIndex('dia_chi');
-    const idxRequirement = getIndex('yeu_cau');
-    const idxPhone = getIndex('sdt_lien_he') !== -1 ? getIndex('sdt_lien_he') : getIndex('sdt');
-    const idxType = getIndex('loai_tin') !== -1 ? getIndex('loai_tin') : getIndex('trang_thai'); // Gap vs Thuong
-    const idxCategory = getIndex('phan_loai'); // Optional
+    const idxTitle = getIndex(['tieu_de', 'cong_viec', 'title']);
+    const idxSalary = getIndex(['muc_luong', 'luong', 'salary']);
+    const idxEmployer = getIndex(['nguoi_tuyen', 'nguoithue', 'employer']);
+    const idxLocation = getIndex(['dia_diem', 'dia_chi', 'location']);
+    const idxRequirement = getIndex(['yeu_cau', 'mo_ta', 'description']);
+    const idxPhone = getIndex(['sdt_lien_he', 'sdt', 'phone']);
+    const idxImage = getIndex(['anh_dai_dien', 'avatar', 'image']);
+    const idxType = getIndex(['loai_tin', 'trang_thai', 'type']); // Gap vs Thuong
+    const idxCategory = getIndex(['phan_loai', 'category']);
 
-    // 3. Parse Data
     const parsedData = rows.slice(1)
         .filter(r => r.trim() !== '')
         .map((row, index) => {
@@ -94,30 +97,30 @@ const JobListingPage: React.FC<JobListingPageProps> = ({ onBack }) => {
             const getCol = (i: number) => (i !== -1 && cols[i]) ? cols[i].trim() : "";
 
             const typeVal = getCol(idxType).toLowerCase();
-            // Logic: Nếu loai_tin chứa 'gap' (bất kể hoa thường) -> isUrgent = true
             const isUrgent = typeVal.includes('gap') || typeVal.includes('hot') || typeVal.includes('gấp');
 
+            // Xử lý lương để lọc "Lương cao" (Ví dụ > 10 triệu hoặc Thỏa thuận)
+            // Logic đơn giản cho UI hiển thị
+            
             return {
                 id: `job-${index}`,
                 title: getCol(idxTitle) || "Công việc mới",
                 salary: getCol(idxSalary) || "Thỏa thuận",
                 employer: getCol(idxEmployer) || "Người tuyển dụng",
                 location: getCol(idxLocation) || "Thạnh Lợi",
-                requirement: getCol(idxRequirement) || "Vui lòng liên hệ để biết chi tiết",
+                requirement: getCol(idxRequirement) || "Liên hệ trực tiếp để trao đổi chi tiết công việc.",
                 postedTime: "Mới đăng", 
                 category: getCol(idxCategory) || "Khác",
                 phone: getCol(idxPhone),
+                image: getCol(idxImage),
                 isUrgent: isUrgent
             };
         });
 
-    // 4. SORTING: Đưa tin Gấp lên đầu danh sách
+    // Sort: Gấp lên đầu
     return parsedData.sort((a, b) => {
-        // Nếu a Gấp và b Thường -> a lên trước (-1)
         if (a.isUrgent && !b.isUrgent) return -1;
-        // Nếu a Thường và b Gấp -> b lên trước (1)
         if (!a.isUrgent && b.isUrgent) return 1;
-        // Nếu cùng loại -> giữ nguyên thứ tự
         return 0;
     });
   };
@@ -127,212 +130,281 @@ const JobListingPage: React.FC<JobListingPageProps> = ({ onBack }) => {
       setIsLoading(true);
       try {
         const response = await fetch(SHEET_URL);
-        if (!response.ok) throw new Error("Failed to fetch jobs");
+        if (!response.ok) throw new Error("Failed");
         const text = await response.text();
         const data = parseCSV(text);
         setJobs(data);
       } catch (err) {
         console.error("Error loading jobs:", err);
-        setError("Không thể tải danh sách việc làm.");
       } finally {
         setIsLoading(false);
       }
     };
-
     fetchJobs();
   }, []);
 
+  // --- FILTER LOGIC ---
   const filteredJobs = jobs.filter(item => {
-    const matchesCategory = activeCategory === "all" || item.category === activeCategory;
-    const matchesSearch = item.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
+    // 1. Filter by Type
+    let matchType = true;
+    if (activeFilter === 'urgent') matchType = item.isUrgent;
+    if (activeFilter === 'high_salary') {
+        const salaryLower = item.salary.toLowerCase();
+        // Logic đơn giản: chứa 'triệu' và số > 10, hoặc 'thỏa thuận'
+        matchType = salaryLower.includes('thỏa thuận') || (salaryLower.includes('tr') && parseInt(salaryLower) > 8);
+    }
+
+    // 2. Search
+    const matchSearch = item.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
                           item.employer.toLowerCase().includes(searchTerm.toLowerCase());
-    return matchesCategory && matchesSearch;
+    
+    return matchType && matchSearch;
   });
 
+  // --- HELPER: GET DEFAULT ICON ---
+  const getJobIcon = (title: string) => {
+      const t = title.toLowerCase();
+      if (t.includes('cafe') || t.includes('phục vụ') || t.includes('pha chế')) return <Coffee size={24} />;
+      if (t.includes('xây dựng') || t.includes('hồ') || t.includes('thợ')) return <Hammer size={24} />;
+      if (t.includes('xe') || t.includes('tài xế') || t.includes('ship')) return <Truck size={24} />;
+      if (t.includes('nông') || t.includes('vườn')) return <Wheat size={24} />;
+      return <Briefcase size={24} />;
+  };
+
   return (
-    <div className="fixed inset-0 z-[60] bg-gray-100 overflow-y-auto overflow-x-hidden custom-scrollbar text-gray-900 font-sans">
+    <div className="fixed inset-0 z-[60] bg-[#121212] overflow-y-auto overflow-x-hidden custom-scrollbar text-gray-100 font-sans">
       
       {/* 1. HEADER */}
-      <div className="sticky top-0 z-50 bg-white border-b border-gray-200 px-4 h-16 flex items-center gap-4 shadow-sm">
+      <div className="sticky top-0 z-50 bg-[#121212]/90 backdrop-blur-xl border-b border-gray-800 h-16 flex items-center gap-4 px-4 shadow-lg">
         <button 
           onClick={onBack}
-          className="p-2 -ml-2 text-gray-600 hover:bg-gray-100 rounded-full transition-colors"
+          className="p-2 -ml-2 text-gray-400 hover:text-white hover:bg-white/10 rounded-full transition-colors"
         >
           <ArrowLeft size={24} />
         </button>
         <div className="flex-1">
-            <h1 className="font-bold text-lg leading-none text-gray-900 flex items-center gap-2">
-                Việc Làm Thạnh Lợi <span className="bg-green-100 text-green-700 text-[10px] px-2 py-0.5 rounded-full uppercase font-black">Local</span>
+            <h1 className="font-black text-lg leading-none text-white uppercase tracking-wide flex items-center gap-2">
+                VIỆC LÀM <span className="text-brand-cyan">THẠNH LỢI</span>
             </h1>
-            <p className="text-xs text-gray-500">Kết nối việc làm địa phương nhanh chóng</p>
         </div>
       </div>
 
-      {/* 2. SEARCH & FILTER */}
-      <div className="bg-white pb-4 px-4 pt-2 shadow-sm sticky top-16 z-40">
-         {/* Search */}
-         <div className="relative mb-4">
+      {/* 2. HERO SEARCH & FILTER */}
+      <div className="bg-[#121212] pt-6 pb-2 px-4 sticky top-16 z-40 shadow-xl border-b border-gray-800">
+         {/* Search Input */}
+         <div className="relative mb-4 group">
              <input 
                 type="text" 
-                placeholder="Tìm: phụ hồ, bán quán,..." 
-                className="w-full bg-gray-100 border-none rounded-xl py-3 pl-10 pr-4 text-sm focus:ring-2 focus:ring-green-500"
+                placeholder="Tìm việc làm (VD: Phụ hồ, Bán quán...)" 
+                className="w-full bg-[#1E1E1E] border border-gray-700 rounded-xl py-3.5 pl-12 pr-4 text-white placeholder-gray-500 focus:outline-none focus:border-brand-cyan focus:ring-1 focus:ring-brand-cyan transition-all shadow-inner"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
              />
-             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 group-focus-within:text-brand-cyan transition-colors" size={20} />
          </div>
 
-         {/* Horizontal Category Scroll */}
-         <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1">
-            {jobCategories.map((cat) => (
+         {/* Filter Chips */}
+         <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-3">
+            {quickFilters.map((filter) => (
                 <button
-                    key={cat.id}
-                    onClick={() => setActiveCategory(cat.id)}
+                    key={filter.id}
+                    onClick={() => setActiveFilter(filter.id)}
                     className={`whitespace-nowrap px-4 py-2 rounded-full border text-xs font-bold transition-all ${
-                        activeCategory === cat.id 
-                        ? "bg-green-600 text-white border-green-600 shadow-lg shadow-green-200" 
-                        : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50"
+                        activeFilter === filter.id 
+                        ? "bg-brand-cyan text-black border-brand-cyan shadow-[0_0_10px_rgba(0,255,255,0.4)]" 
+                        : "bg-[#1E1E1E] text-gray-400 border-gray-700 hover:border-gray-500 hover:text-white"
                     }`}
                 >
-                   <span className="flex items-center gap-2">
-                     {activeCategory === cat.id && cat.icon}
-                     {cat.name}
-                   </span>
+                   {filter.label}
                 </button>
             ))}
          </div>
       </div>
 
       {/* 3. JOB LIST */}
-      <div className="max-w-2xl mx-auto px-4 py-6 space-y-4 pb-24">
+      <div className="max-w-4xl mx-auto px-4 py-8 space-y-4 pb-32">
         {isLoading && (
-            <div className="flex flex-col items-center justify-center py-10 text-gray-400">
-                <RefreshCw className="animate-spin mb-2 text-green-600" size={24} />
-                <p>Đang cập nhật việc làm...</p>
+            <div className="flex flex-col items-center justify-center py-20 text-gray-500">
+                <RefreshCw className="animate-spin mb-4 text-brand-cyan" size={32} />
+                <p>Đang tải danh sách việc làm...</p>
             </div>
         )}
 
-        {error && (
-            <div className="flex flex-col items-center justify-center py-10 text-red-500">
-                <AlertCircle size={24} className="mb-2" />
-                <p>{error}</p>
+        {!isLoading && filteredJobs.length === 0 && (
+            <div className="text-center py-20 text-gray-600">
+                <Briefcase size={48} className="mx-auto mb-4 opacity-20" />
+                <p>Không tìm thấy việc làm phù hợp.</p>
             </div>
         )}
 
-        {!isLoading && !error && filteredJobs.length === 0 && (
-            <div className="text-center py-10 text-gray-500">
-                <p>Chưa có việc làm nào phù hợp.</p>
-            </div>
-        )}
-
-        {!isLoading && !error && filteredJobs.map((job, index) => (
-            <React.Fragment key={job.id}>
-                
-                {/* Internal Ad Banner for Tech Courses (Interspersed) */}
-                {index === 3 && (
-                    <motion.div 
-                        initial={{ opacity: 0, scale: 0.95 }}
-                        whileInView={{ opacity: 1, scale: 1 }}
-                        viewport={{ once: true }}
-                        className="bg-[#121212] rounded-xl p-5 border border-gray-800 text-white relative overflow-hidden shadow-xl my-6"
-                    >
-                         <div className="absolute inset-0 bg-gradient-to-r from-purple-900/50 to-transparent"></div>
-                         <div className="relative z-10 flex flex-col items-start">
-                             <span className="bg-brand-cyan text-black font-bold text-[10px] px-2 py-0.5 uppercase mb-2">Đào tạo nghề</span>
-                             <h3 className="font-bold text-lg mb-1">Học AI & Edit Video</h3>
-                             <p className="text-gray-400 text-xs mb-3">Làm việc online tại nhà, thu nhập không giới hạn.</p>
-                             <button className="bg-white text-black text-xs font-bold px-4 py-2 rounded hover:bg-brand-cyan transition-colors">
-                                 Xem khóa học
-                             </button>
-                         </div>
-                    </motion.div>
-                )}
-
-                {/* JOB CARD */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {!isLoading && filteredJobs.map((job) => (
                 <motion.div
-                    initial={{ opacity: 0, y: 10 }}
+                    key={job.id}
+                    initial={{ opacity: 0, y: 20 }}
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true }}
-                    className={`bg-white rounded-xl p-4 shadow-sm border relative overflow-hidden transition-all duration-300 ${
+                    className={`group relative bg-[#1a1a1a] rounded-2xl p-5 border transition-all duration-300 ${
                         job.isUrgent 
-                        ? 'border-red-300 shadow-red-50 ring-1 ring-red-100' // Visual Highlight cho tin Gấp
-                        : 'border-gray-200'
+                        ? 'border-red-900/50 hover:border-red-500 hover:shadow-[0_0_20px_rgba(220,38,38,0.2)]' 
+                        : 'border-gray-800 hover:border-brand-cyan hover:shadow-[0_0_15px_rgba(0,255,255,0.1)]'
                     }`}
                 >
-                    {/* Badge Tuyển Gấp (Conditional Rendering) */}
+                    {/* Badge Tuyển Gấp */}
                     {job.isUrgent && (
                         <div className="absolute top-0 right-0 z-10">
-                            <div className="bg-red-600 text-white text-[10px] font-black px-3 py-1 rounded-bl-xl shadow-sm flex items-center gap-1 animate-pulse">
-                                TUYỂN GẤP 🔥
+                            <div className="bg-red-600 text-white text-[10px] font-black px-3 py-1 rounded-tr-xl rounded-bl-xl shadow-lg flex items-center gap-1 animate-pulse">
+                                <Zap size={10} fill="currentColor" /> GẤP
                             </div>
                         </div>
                     )}
 
-                    {/* Header: Title & Salary */}
-                    <div className="mb-3 pr-8">
-                        {/* tieu_de mapped to h3 */}
-                        <h3 className="text-lg font-bold text-gray-900 leading-snug">
-                            {job.title}
-                        </h3>
-                        {/* muc_luong highlighted */}
-                        <p className="text-amber-600 font-extrabold text-lg mt-1 flex items-center gap-1">
-                            {job.salary}
+                    {/* Header: Avatar + Title */}
+                    <div className="flex items-start gap-4 mb-4">
+                        <div className={`w-14 h-14 rounded-xl flex items-center justify-center shrink-0 overflow-hidden border border-gray-700 ${!job.image ? 'bg-gray-800 text-gray-400' : 'bg-black'}`}>
+                            {job.image ? (
+                                <img src={job.image} alt={job.employer} className="w-full h-full object-cover" />
+                            ) : (
+                                getJobIcon(job.title)
+                            )}
+                        </div>
+                        <div className="flex-1 min-w-0 pt-0.5">
+                            <h3 className="text-base font-bold text-white leading-tight mb-1 truncate pr-8">
+                                {job.title}
+                            </h3>
+                            <div className="flex items-center gap-2 text-xs text-gray-400">
+                                <Building2 size={12} className="shrink-0" />
+                                <span className="truncate max-w-[120px]">{job.employer}</span>
+                                <span className="w-1 h-1 rounded-full bg-gray-600"></span>
+                                <MapPin size={12} className="shrink-0" />
+                                <span className="truncate">{job.location}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Salary Section */}
+                    <div className="mb-5 bg-[#252525] p-3 rounded-lg border border-gray-700 flex items-center justify-between">
+                         <span className="text-xs text-gray-400 uppercase font-bold tracking-wider">Mức lương</span>
+                         <div className="flex items-center gap-1 text-[#FFD700] font-black text-lg drop-shadow-sm">
+                             <DollarSign size={18} /> {job.salary}
+                         </div>
+                    </div>
+
+                    {/* Action Buttons */}
+                    <div className="grid grid-cols-2 gap-3">
+                        <button
+                            onClick={() => setSelectedJob(job)}
+                            className="bg-transparent border border-brand-cyan text-brand-cyan hover:bg-brand-cyan hover:text-black py-2.5 rounded-xl text-xs font-bold uppercase transition-all"
+                        >
+                            Xem chi tiết
+                        </button>
+                        <a 
+                            href={`tel:${job.phone}`}
+                            className="bg-gradient-to-r from-green-600 to-emerald-600 text-white hover:from-green-500 hover:to-emerald-500 py-2.5 rounded-xl text-xs font-bold uppercase flex items-center justify-center gap-2 transition-all shadow-[0_0_15px_rgba(16,185,129,0.3)]"
+                        >
+                            <Phone size={14} fill="currentColor" /> Ứng tuyển
+                        </a>
+                    </div>
+
+                </motion.div>
+            ))}
+        </div>
+      </div>
+
+      {/* 4. DETAIL MODAL */}
+      <AnimatePresence>
+        {selectedJob && (
+            <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="fixed inset-0 z-[70] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4"
+                onClick={() => setSelectedJob(null)}
+            >
+                <motion.div
+                    initial={{ scale: 0.9, y: 30 }}
+                    animate={{ scale: 1, y: 0 }}
+                    exit={{ scale: 0.9, y: 30 }}
+                    className="bg-[#1a1a1a] w-full max-w-md rounded-2xl border border-gray-700 overflow-hidden relative shadow-2xl flex flex-col max-h-[90vh]"
+                    onClick={(e) => e.stopPropagation()}
+                >
+                    {/* Modal Header */}
+                    <div className="p-6 pb-4 border-b border-gray-800 flex justify-between items-start bg-gradient-to-b from-[#252525] to-[#1a1a1a]">
+                        <div className="flex items-center gap-4">
+                            <div className={`w-16 h-16 rounded-xl flex items-center justify-center shrink-0 overflow-hidden border border-gray-600 ${!selectedJob.image ? 'bg-gray-800 text-gray-400' : 'bg-black'}`}>
+                                {selectedJob.image ? (
+                                    <img src={selectedJob.image} alt={selectedJob.employer} className="w-full h-full object-cover" />
+                                ) : (
+                                    getJobIcon(selectedJob.title)
+                                )}
+                            </div>
+                            <div>
+                                {selectedJob.isUrgent && (
+                                    <span className="bg-red-600 text-white text-[9px] font-black px-2 py-0.5 rounded uppercase mb-1 inline-block">Tuyển Gấp</span>
+                                )}
+                                <h2 className="text-xl font-bold text-white leading-tight">{selectedJob.title}</h2>
+                                <p className="text-sm text-gray-400">{selectedJob.employer}</p>
+                            </div>
+                        </div>
+                        <button 
+                            onClick={() => setSelectedJob(null)}
+                            className="bg-black/50 p-2 rounded-full text-gray-400 hover:text-white hover:bg-gray-700 transition-colors"
+                        >
+                            <X size={20} />
+                        </button>
+                    </div>
+
+                    {/* Modal Body */}
+                    <div className="p-6 overflow-y-auto custom-scrollbar flex-grow">
+                        {/* Salary Info */}
+                        <div className="flex items-center justify-between bg-brand-cyan/5 border border-brand-cyan/20 p-4 rounded-xl mb-6">
+                            <div className="flex items-center gap-3">
+                                <div className="p-2 bg-brand-cyan/20 rounded-full text-brand-cyan">
+                                    <DollarSign size={20} />
+                                </div>
+                                <div>
+                                    <p className="text-xs text-gray-400 uppercase font-bold">Mức lương</p>
+                                    <p className="text-brand-cyan font-bold text-lg">{selectedJob.salary}</p>
+                                </div>
+                            </div>
+                            <div className="text-right">
+                                <p className="text-xs text-gray-400 uppercase font-bold">Địa điểm</p>
+                                <p className="text-white font-medium text-sm">{selectedJob.location}</p>
+                            </div>
+                        </div>
+
+                        {/* Description */}
+                        <div className="space-y-4">
+                            <div>
+                                <h4 className="flex items-center gap-2 text-white font-bold uppercase text-sm mb-2 border-l-2 border-brand-cyan pl-3">
+                                    Mô tả & Yêu cầu
+                                </h4>
+                                <div className="text-gray-300 text-sm leading-relaxed whitespace-pre-line bg-[#151515] p-4 rounded-xl border border-gray-800">
+                                    {selectedJob.requirement}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Modal Footer */}
+                    <div className="p-4 border-t border-gray-800 bg-[#1a1a1a]">
+                        <a 
+                            href={`tel:${selectedJob.phone}`}
+                            className="w-full bg-[#00C853] hover:bg-[#00E676] text-white py-4 rounded-xl text-sm font-bold uppercase flex items-center justify-center gap-2 transition-all shadow-[0_0_20px_rgba(0,200,83,0.4)] animate-pulse-fast"
+                        >
+                            <Phone size={20} fill="currentColor" /> Gọi Ứng Tuyển Ngay
+                        </a>
+                        <p className="text-center text-[10px] text-gray-500 mt-2">
+                            Hãy nói "Tôi tìm thấy tin từ Momo x HuyKyo" khi gọi điện.
                         </p>
                     </div>
 
-                    {/* Body Info */}
-                    <div className="space-y-3 mb-5">
-                        {/* Employer & Location */}
-                        <div className="flex flex-col gap-1">
-                             <div className="flex items-center gap-2 text-sm font-bold text-gray-800">
-                                <div className="w-6 h-6 rounded-full bg-gray-100 flex items-center justify-center text-xs font-bold uppercase text-gray-500 border border-gray-200">
-                                    {job.employer.charAt(0)}
-                                </div>
-                                {job.employer}
-                            </div>
-                            <div className="flex items-start gap-2 text-xs text-gray-500 ml-8">
-                                <MapPin size={12} className="mt-0.5 shrink-0" />
-                                {job.location}
-                            </div>
-                        </div>
-
-                        {/* Requirement Box */}
-                        <div className="bg-gray-50 p-3 rounded-lg border border-gray-100">
-                            <div className="text-xs text-gray-400 font-bold uppercase mb-1 flex items-center gap-1">
-                                <Zap size={10} /> Yêu cầu
-                            </div>
-                            <p className="text-sm text-gray-700 leading-relaxed">
-                                {job.requirement}
-                            </p>
-                        </div>
-                    </div>
-
-                    {/* Footer & CTA Button */}
-                    <div className="pt-2">
-                        {/* Nút GỌI XIN VIỆC - Full width */}
-                        <a 
-                            href={`tel:${job.phone}`}
-                            className={`w-full py-3.5 rounded-xl text-sm font-bold uppercase shadow-lg transition-all flex items-center justify-center gap-2 ${
-                                job.isUrgent 
-                                ? 'bg-red-600 hover:bg-red-500 text-white shadow-red-200' 
-                                : 'bg-green-600 hover:bg-green-500 text-white shadow-green-200'
-                            } active:scale-95`}
-                        >
-                            <Phone size={18} fill="currentColor" /> {job.isUrgent ? 'GỌI NGAY (GẤP)' : 'GỌI XIN VIỆC'}
-                        </a>
-                        <div className="text-center mt-2">
-                             <span className="text-[10px] text-gray-400 flex items-center justify-center gap-1">
-                                <Clock size={10} /> Đăng: {job.postedTime}
-                            </span>
-                        </div>
-                    </div>
                 </motion.div>
+            </motion.div>
+        )}
+      </AnimatePresence>
 
-            </React.Fragment>
-        ))}
-      </div>
-
-      {/* 4. FLOATING POST BUTTON */}
+      {/* Floating CTA */}
       <motion.a
          href="https://zalo.me/0386328473"
          target="_blank"
@@ -340,15 +412,10 @@ const JobListingPage: React.FC<JobListingPageProps> = ({ onBack }) => {
          initial={{ scale: 0 }}
          animate={{ scale: 1 }}
          whileHover={{ scale: 1.1 }}
-         className="fixed bottom-6 right-6 w-14 h-14 bg-blue-600 rounded-full shadow-2xl flex items-center justify-center text-white z-50 border-4 border-white"
+         className="fixed bottom-6 right-6 w-14 h-14 bg-brand-cyan text-black rounded-full shadow-[0_0_20px_rgba(0,255,255,0.4)] flex items-center justify-center z-50 border-2 border-white"
       >
           <Plus size={28} />
       </motion.a>
-      
-      <div className="fixed bottom-6 right-24 bg-black/80 text-white text-xs px-3 py-1 rounded-lg backdrop-blur-sm pointer-events-none">
-          Đăng tin miễn phí
-          <div className="absolute -right-1 top-1/2 -translate-y-1/2 w-2 h-2 bg-black/80 rotate-45"></div>
-      </div>
 
     </div>
   );
