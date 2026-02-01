@@ -15,7 +15,9 @@ import {
   Tag,
   Percent,
   Sparkles,
-  Zap
+  Zap,
+  Home,
+  Smartphone
 } from 'lucide-react';
 
 interface GeneralMarketPageProps {
@@ -39,12 +41,12 @@ interface MarketItem {
 // 1. NGUỒN DỮ LIỆU
 const SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRJrotBdzd-po6z_Zd6fbew0pqGgdDdZjRMf7vutpfJia2aFpNyTZNdvGZxN4MfcGtRwJWUrmICvZMF/pub?gid=964173450&single=true&output=csv";
 
-// 2. DANH MỤC LỌC (Theo yêu cầu mới)
+// 2. DANH MỤC LỌC (Cập nhật Nông sản -> Công Nghệ)
 const categories = [
   { id: "all", name: "Tất cả", icon: <Package size={16} /> },
-  { id: "am_thuc", name: "Ẩm thực", icon: <ShoppingBag size={16} /> },
+  { id: "gia_dung", name: "Gia Dụng", icon: <Home size={16} /> },
   { id: "thoi_trang", name: "Thời trang", icon: <Tag size={16} /> },
-  { id: "nong_san", name: "Nông sản", icon: <Sparkles size={16} /> },
+  { id: "cong_nghe", name: "Công Nghệ", icon: <Smartphone size={16} /> },
   { id: "do_cu", name: "Đồ cũ / Thanh lý", icon: <RefreshCw size={16} /> },
   { id: "khac", name: "Khác", icon: <Zap size={16} /> },
 ];
@@ -150,11 +152,11 @@ const GeneralMarketPage: React.FC<GeneralMarketPageProps> = ({ onBack }) => {
     let matchesCategory = true;
     if (activeCategory !== "all") {
         const catLower = item.category.toLowerCase();
-        if (activeCategory === "am_thuc") matchesCategory = catLower.includes("ăn") || catLower.includes("uống") || catLower.includes("thực phẩm");
+        if (activeCategory === "gia_dung") matchesCategory = catLower.includes("gia dụng") || catLower.includes("bếp") || catLower.includes("nồi") || catLower.includes("nhà") || catLower.includes("thiết bị");
         else if (activeCategory === "thoi_trang") matchesCategory = catLower.includes("áo") || catLower.includes("quần") || catLower.includes("mặc");
-        else if (activeCategory === "nong_san") matchesCategory = catLower.includes("cây") || catLower.includes("hoa") || catLower.includes("trái");
+        else if (activeCategory === "cong_nghe") matchesCategory = catLower.includes("điện thoại") || catLower.includes("máy") || catLower.includes("iphone") || catLower.includes("samsung") || catLower.includes("loa") || catLower.includes("tai nghe") || catLower.includes("camera") || catLower.includes("phụ kiện");
         else if (activeCategory === "do_cu") matchesCategory = catLower.includes("cũ") || catLower.includes("thanh lý") || catLower.includes("xe");
-        else if (activeCategory === "khac") matchesCategory = !catLower.includes("ăn") && !catLower.includes("áo") && !catLower.includes("cây") && !catLower.includes("cũ");
+        else if (activeCategory === "khac") matchesCategory = !catLower.includes("gia dụng") && !catLower.includes("áo") && !catLower.includes("điện thoại") && !catLower.includes("cũ");
     }
 
     // Filter Search
@@ -194,7 +196,7 @@ const GeneralMarketPage: React.FC<GeneralMarketPageProps> = ({ onBack }) => {
              <div className="relative group">
                 <input 
                     type="text" 
-                    placeholder="Tìm kiếm: Cây cảnh, Đồ gia dụng,..." 
+                    placeholder="Tìm kiếm: Điện thoại, Đồ gia dụng,..." 
                     className="w-full bg-[#1E1E1E] border border-white/20 rounded-2xl py-4 pl-12 pr-4 text-white placeholder-gray-500 focus:outline-none focus:border-brand-cyan focus:ring-1 focus:ring-brand-cyan transition-all shadow-xl"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
