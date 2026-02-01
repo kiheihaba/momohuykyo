@@ -20,6 +20,7 @@ import RealEstatePage from './components/RealEstatePage';
 import FashionPage from './components/FashionPage';
 import VehiclePage from './components/VehiclePage';
 import GeneralMarketPage from './components/GeneralMarketPage';
+import CommunityPage from './components/CommunityPage';
 
 const App: React.FC = () => {
   const [showMerch, setShowMerch] = useState(false);
@@ -35,6 +36,7 @@ const App: React.FC = () => {
   const [showFashion, setShowFashion] = useState(false);
   const [showVehiclePage, setShowVehiclePage] = useState(false);
   const [showGeneralMarketPage, setShowGeneralMarketPage] = useState(false);
+  const [showCommunityPage, setShowCommunityPage] = useState(false);
 
   // Helper function to turn off all views
   const resetAllViews = () => {
@@ -51,6 +53,7 @@ const App: React.FC = () => {
     setShowFashion(false);
     setShowVehiclePage(false);
     setShowGeneralMarketPage(false);
+    setShowCommunityPage(false);
   };
 
   // Sync state with URL Hash
@@ -80,6 +83,7 @@ const App: React.FC = () => {
       case '#thanhloiquetoi-fashion': setShowFashion(true); break;
       case '#thanhloiquetoi-vehicles': setShowVehiclePage(true); break;
       case '#thanhloiquetoi-general': setShowGeneralMarketPage(true); break;
+      case '#thanhloiquetoi-community': setShowCommunityPage(true); break;
       default: break;
     }
   };
@@ -111,6 +115,7 @@ const App: React.FC = () => {
   const handleOpenFashion = () => window.location.hash = 'thanhloiquetoi-fashion';
   const handleOpenVehiclePage = () => window.location.hash = 'thanhloiquetoi-vehicles';
   const handleOpenGeneralMarketPage = () => window.location.hash = 'thanhloiquetoi-general';
+  const handleOpenCommunityPage = () => window.location.hash = 'thanhloiquetoi-community';
 
   // Back Handlers
   const handleBackToHome = () => {
@@ -133,6 +138,7 @@ const App: React.FC = () => {
   if (showFashion) return <FashionPage onBack={handleBackToMarket} />;
   if (showVehiclePage) return <VehiclePage onBack={handleBackToMarket} />;
   if (showGeneralMarketPage) return <GeneralMarketPage onBack={handleBackToMarket} />;
+  if (showCommunityPage) return <CommunityPage onBack={handleBackToMarket} />;
 
   if (showMarket) {
     return <ThanhLoiMarketPage 
@@ -144,6 +150,7 @@ const App: React.FC = () => {
         onOpenFashion={handleOpenFashion}
         onOpenVehicles={handleOpenVehiclePage}
         onOpenGeneralMarket={handleOpenGeneralMarketPage}
+        onOpenCommunity={handleOpenCommunityPage}
     />;
   }
 

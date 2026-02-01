@@ -22,7 +22,8 @@ import {
   AlertCircle,
   User,
   ChevronDown,
-  ShoppingBag
+  ShoppingBag,
+  HeartHandshake
 } from 'lucide-react';
 import Footer from './Footer';
 
@@ -35,6 +36,7 @@ interface ThanhLoiMarketPageProps {
   onOpenFashion?: () => void;
   onOpenVehicles?: () => void;
   onOpenGeneralMarket?: () => void;
+  onOpenCommunity?: () => void;
 }
 
 // Interface chuẩn cho Listing hiển thị ở trang chủ
@@ -76,6 +78,7 @@ const categories = [
   },
   { id: 6, name: "Xe Cộ", icon: <Car size={24} />, color: "bg-red-100 text-red-600" },
   { id: 7, name: "Bất động sản", icon: <Home size={24} />, color: "bg-purple-100 text-purple-600" },
+  { id: 8, name: "Góc Cộng Đồng", icon: <HeartHandshake size={24} />, color: "bg-indigo-100 text-indigo-600", subtitle: "(SOS/Tặng đồ)" },
 ];
 
 const ThanhLoiMarketPage: React.FC<ThanhLoiMarketPageProps> = ({ 
@@ -86,7 +89,8 @@ const ThanhLoiMarketPage: React.FC<ThanhLoiMarketPageProps> = ({
   onOpenRealEstate,
   onOpenFashion,
   onOpenVehicles,
-  onOpenGeneralMarket
+  onOpenGeneralMarket,
+  onOpenCommunity
 }) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [listings, setListings] = useState<MarketListing[]>([]);
@@ -314,6 +318,8 @@ const ThanhLoiMarketPage: React.FC<ThanhLoiMarketPageProps> = ({
         onOpenVehicles();
     } else if (catName === "Chợ Mua Sắm" && onOpenGeneralMarket) {
         onOpenGeneralMarket();
+    } else if (catName === "Góc Cộng Đồng" && onOpenCommunity) {
+        onOpenCommunity();
     }
   };
 
@@ -447,7 +453,7 @@ const ThanhLoiMarketPage: React.FC<ThanhLoiMarketPageProps> = ({
                 </h2>
             </div>
             
-            <div className="grid grid-cols-3 md:grid-cols-6 gap-4">
+            <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-8 gap-4">
                 {categories.map((cat) => (
                     <motion.div 
                         key={cat.id}
