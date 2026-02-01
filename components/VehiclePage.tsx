@@ -109,7 +109,7 @@ const VehiclePage: React.FC<VehiclePageProps> = ({ onBack }) => {
     const idxDesc = getIndex(['mo_ta', 'description']);
     const idxStatus = getIndex(['trang_thai', 'status']); // ConHang / DaBan
 
-    const parsed = rows.slice(1)
+    const parsedData = rows.slice(1)
         .filter(r => r.trim() !== '')
         .map((row, index): VehicleItem => {
             const cols = parseLine(row);
@@ -139,8 +139,14 @@ const VehiclePage: React.FC<VehiclePageProps> = ({ onBack }) => {
             };
         });
     
-    // Sort: Còn hàng lên trước
-    return parsed.sort((a, b) => {
+    // Fisher-Yates Shuffle
+    for (let i = parsedData.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [parsedData[i], parsedData[j]] = [parsedData[j], parsedData[i]];
+    }
+
+    // Sort: Còn hàng lên trước (nhưng ngẫu nhiên trong nhóm còn hàng)
+    return parsedData.sort((a, b) => {
         if (a.status === 'DaBan' && b.status !== 'DaBan') return 1;
         if (a.status !== 'DaBan' && b.status === 'DaBan') return -1;
         return 0;

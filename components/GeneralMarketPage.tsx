@@ -105,7 +105,7 @@ const GeneralMarketPage: React.FC<GeneralMarketPageProps> = ({ onBack }) => {
     const idxDiscount = getIndex(['giam_gia', 'discount', 'sale']);
     const idxLocation = getIndex(['dia_chi', 'location']);
 
-    const parsed = rows.slice(1)
+    const parsedData = rows.slice(1)
         .filter(r => r.trim() !== '')
         .map((row, index) => {
             const cols = parseLine(row);
@@ -136,8 +136,14 @@ const GeneralMarketPage: React.FC<GeneralMarketPageProps> = ({ onBack }) => {
             };
         });
     
-    // Sort: Còn hàng lên trước, sau đó ưu tiên Mới
-    return parsed.sort((a, b) => {
+    // Fisher-Yates Shuffle
+    for (let i = parsedData.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [parsedData[i], parsedData[j]] = [parsedData[j], parsedData[i]];
+    }
+
+    // Sort: Còn hàng lên trước, sau đó ưu tiên Mới (nhưng ngẫu nhiên trong nhóm)
+    return parsedData.sort((a, b) => {
         if (a.status === 'DaBan' && b.status !== 'DaBan') return 1;
         if (a.status !== 'DaBan' && b.status === 'DaBan') return -1;
         if (a.isNew && !b.isNew) return -1;

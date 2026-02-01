@@ -90,7 +90,7 @@ const JobListingPage: React.FC<JobListingPageProps> = ({ onBack }) => {
     const idxImage = getIndex(['anh_dai_dien', 'avatar', 'image']);
     const idxCategory = getIndex(['phan_loai', 'nganh_nghe']);
 
-    return rows.slice(1)
+    const parsedData = rows.slice(1)
         .filter(r => r.trim() !== '')
         .map((row, index) => {
             const cols = parseLine(row);
@@ -116,8 +116,16 @@ const JobListingPage: React.FC<JobListingPageProps> = ({ onBack }) => {
                 image: rawImage,
                 category: getCol(idxCategory) || "Lao động"
             };
-        })
-        .sort((a, b) => (a.isUrgent === b.isUrgent ? 0 : a.isUrgent ? -1 : 1)); // Ưu tiên tin gấp
+        });
+    
+    // Fisher-Yates Shuffle (Randomize order first)
+    for (let i = parsedData.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [parsedData[i], parsedData[j]] = [parsedData[j], parsedData[i]];
+    }
+
+    // Sort: Ưu tiên tin gấp lên đầu (nhưng thứ tự trong nhóm gấp sẽ ngẫu nhiên nhờ bước shuffle trên)
+    return parsedData.sort((a, b) => (a.isUrgent === b.isUrgent ? 0 : a.isUrgent ? -1 : 1));
   };
 
   useEffect(() => {

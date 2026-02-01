@@ -98,7 +98,7 @@ const ServiceListingPage: React.FC<ServiceListingPageProps> = ({ onBack }) => {
     const idxProfile = getIndex(['linkprofile', 'link_profile', 'profile', 'facebook', 'web', 'link_ho_so']); 
     const idxVerified = getIndex(['xac_thuc', 'verified', 'status']);
 
-    return rows.slice(1)
+    const parsedData = rows.slice(1)
         .filter(r => r.trim() !== '')
         .map((row, index) => {
             const cols = parseLine(row);
@@ -119,6 +119,14 @@ const ServiceListingPage: React.FC<ServiceListingPageProps> = ({ onBack }) => {
                 isVerified: isVerified
             };
         });
+
+    // Fisher-Yates Shuffle
+    for (let i = parsedData.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [parsedData[i], parsedData[j]] = [parsedData[j], parsedData[i]];
+    }
+
+    return parsedData;
   };
 
   useEffect(() => {

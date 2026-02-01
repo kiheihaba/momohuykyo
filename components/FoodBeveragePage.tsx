@@ -102,7 +102,7 @@ const FoodBeveragePage: React.FC<FoodBeveragePageProps> = ({ onBack }) => {
     const idxCategory = getIndex(['loai_mon', 'phan_loai', 'category']);
     const idxDesc = getIndex(['mo_ta']);
 
-    return rows.slice(1).filter(r => r.trim() !== '').map((row, index) => {
+    const parsedData = rows.slice(1).filter(r => r.trim() !== '').map((row, index) => {
       const values = parseLine(row);
       
       const getValue = (i: number) => {
@@ -132,6 +132,14 @@ const FoodBeveragePage: React.FC<FoodBeveragePageProps> = ({ onBack }) => {
         rating: 5.0,
       };
     });
+
+    // Fisher-Yates Shuffle: Xáo trộn ngẫu nhiên danh sách món ăn
+    for (let i = parsedData.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [parsedData[i], parsedData[j]] = [parsedData[j], parsedData[i]];
+    }
+
+    return parsedData;
   };
 
   useEffect(() => {

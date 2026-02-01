@@ -112,7 +112,7 @@ const RealEstatePage: React.FC<RealEstatePageProps> = ({ onBack }) => {
     const idxVerified = getIndex(['xac_thuc', 'verified', 'status']);
     const idxDesc = getIndex(['mo_ta', 'chi_tiet', 'description']);
 
-    const parsed = rows.slice(1)
+    const parsedData = rows.slice(1)
         .filter(r => r.trim() !== '')
         .map((row, index) => {
             const cols = parseLine(row);
@@ -136,9 +136,15 @@ const RealEstatePage: React.FC<RealEstatePageProps> = ({ onBack }) => {
                 isVerified: isVerified
             };
         });
+
+    // Fisher-Yates Shuffle (Randomize everything)
+    for (let i = parsedData.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [parsedData[i], parsedData[j]] = [parsedData[j], parsedData[i]];
+    }
     
-    // Ưu tiên tin đã xác thực lên đầu
-    return parsed.sort((a, b) => (Number(b.isVerified) - Number(a.isVerified)));
+    // Sort: Ưu tiên tin đã xác thực lên đầu (nhưng thứ tự trong nhóm xác thực sẽ ngẫu nhiên)
+    return parsedData.sort((a, b) => (Number(b.isVerified) - Number(a.isVerified)));
   };
 
   useEffect(() => {
