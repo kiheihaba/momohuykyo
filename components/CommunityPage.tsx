@@ -15,7 +15,10 @@ import {
   Clock,
   Plus,
   RefreshCw,
-  AlertTriangle
+  AlertTriangle,
+  X,
+  MessageCircle,
+  Calendar
 } from 'lucide-react';
 
 interface CommunityPageProps {
@@ -35,7 +38,6 @@ interface CommunityItem {
 }
 
 // URL Google Sheet Mới
-// Cấu trúc cột: tieu_de, mo_ta, hinh_anh, loai_tin, trang_thai, khu_vuc, sdt, thoi_gian
 const SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRJrotBdzd-po6z_Zd6fbew0pqGgdDdZjRMf7vutpfJia2aFpNyTZNdvGZxN4MfcGtRwJWUrmICvZMF/pub?gid=2048156150&single=true&output=csv";
 
 const filters = [
@@ -50,6 +52,7 @@ const CommunityPage: React.FC<CommunityPageProps> = ({ onBack }) => {
   const [activeFilter, setActiveFilter] = useState("all");
   const [items, setItems] = useState<CommunityItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [selectedItem, setSelectedItem] = useState<CommunityItem | null>(null);
 
   // --- PARSE CSV ---
   const parseCSV = (text: string): CommunityItem[] => {
@@ -74,7 +77,7 @@ const CommunityPage: React.FC<CommunityPageProps> = ({ onBack }) => {
     const idxStatus = getIndex(['trang_thai', 'status']);
     const idxLoc = getIndex(['khu_vuc', 'dia_chi', 'location']);
     const idxPhone = getIndex(['sdt', 'phone']);
-    const idxTime = getIndex(['thoi_gian', 'time']);
+    const idxTime = getIndex(['thoi_gian', 'time', 'ngay_dang']);
 
     return rows.slice(1).filter(r => r.trim() !== '').map((row, index) => {
         const cols = parseLine(row);
@@ -88,7 +91,7 @@ const CommunityPage: React.FC<CommunityPageProps> = ({ onBack }) => {
 
         // Normalize Status
         const rawStatus = getCol(idxStatus).toLowerCase();
-        const status = (rawStatus.includes('xong') || rawStatus.includes('thay') || rawStatus.includes('het')) ? 'resolved' : 'active';
+        const status = (rawStatus.includes('xong') || rawStatus.includes('thay') || rawStatus.includes('het') || rawStatus.includes('done')) ? 'resolved' : 'active';
 
         return {
             id: `comm-${index}`,
@@ -125,12 +128,12 @@ const CommunityPage: React.FC<CommunityPageProps> = ({ onBack }) => {
   const filteredItems = items.filter(item => {
       if (activeFilter === 'all') return true;
       if (activeFilter === 'resolved') return item.status === 'resolved';
-      // Nếu chọn filter khác, chỉ hiện tin đang active
       if (item.status === 'resolved') return false; 
       return item.type === activeFilter;
   });
 
-  const handleShare = (item: CommunityItem) => {
+  const handleShare = (item: CommunityItem, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
     const text = `${item.type === 'sos' ? '🆘' : '📢'} ${item.title}\n📍 ${item.location}\n📞 LH: ${item.phone}`;
     if (navigator.share) {
         navigator.share({ title: item.title, text: text, url: window.location.href });
@@ -138,6 +141,11 @@ const CommunityPage: React.FC<CommunityPageProps> = ({ onBack }) => {
         navigator.clipboard.writeText(text);
         alert('Đã sao chép nội dung tin!');
     }
+  };
+
+  const handleZaloShare = () => {
+      const url = encodeURIComponent(window.location.href);
+      window.open(`https://zalo.me/share/?url=${url}`, '_blank');
   };
 
   return (
@@ -213,14 +221,15 @@ const CommunityPage: React.FC<CommunityPageProps> = ({ onBack }) => {
                         whileInView={{ opacity: 1, y: 0 }}
                         viewport={{ once: true }}
                         transition={{ delay: index * 0.05 }}
-                        className={`relative bg-[#1a1a1a] border border-gray-800 rounded-2xl overflow-hidden flex flex-col ${isResolved ? 'opacity-60 grayscale' : 'hover:border-gray-600'}`}
+                        onClick={() => setSelectedItem(item)} // Open Modal Handler
+                        className={`relative bg-[#1a1a1a] border border-gray-800 rounded-2xl overflow-hidden flex flex-col cursor-pointer ${isResolved ? 'opacity-60 grayscale' : 'hover:border-gray-600 hover:shadow-[0_0_15px_rgba(255,255,255,0.05)]'} transition-all duration-300`}
                     >
                         {/* IMAGE HEADER (4:3) */}
                         <div className="aspect-[4/3] relative bg-black overflow-hidden">
                             <img 
                                 src={item.image} 
                                 alt={item.title} 
-                                className="w-full h-full object-cover"
+                                className="w-full h-full object-cover transition-transform duration-700 hover:scale-105"
                                 onError={(e) => { (e.target as HTMLImageElement).src = "https://placehold.co/600x400/1a1a1a/333?text=No+Image"; }}
                             />
                             
@@ -262,8 +271,8 @@ const CommunityPage: React.FC<CommunityPageProps> = ({ onBack }) => {
 
                             {/* ACTIONS FOOTER */}
                             <div className="grid grid-cols-4 gap-2 pt-2 border-t border-gray-800">
-                                <a 
-                                    href={isResolved ? undefined : `tel:${item.phone}`}
+                                <button
+                                    onClick={(e) => { e.stopPropagation(); window.location.href = `tel:${item.phone}`; }}
                                     className={`col-span-3 py-2.5 rounded-lg text-xs font-bold uppercase flex items-center justify-center gap-2 transition-all ${
                                         isResolved 
                                         ? "bg-gray-700 text-gray-500 cursor-not-allowed" 
@@ -271,9 +280,9 @@ const CommunityPage: React.FC<CommunityPageProps> = ({ onBack }) => {
                                     }`}
                                 >
                                     <Phone size={14} fill="currentColor" /> Liên hệ ngay
-                                </a>
+                                </button>
                                 <button 
-                                    onClick={() => handleShare(item)}
+                                    onClick={(e) => handleShare(item, e)}
                                     className="col-span-1 bg-gray-800 hover:bg-gray-700 text-white rounded-lg flex items-center justify-center transition-colors"
                                 >
                                     <Share2 size={16} />
@@ -304,6 +313,122 @@ const CommunityPage: React.FC<CommunityPageProps> = ({ onBack }) => {
               <div className="absolute right-[-6px] top-1/2 -translate-y-1/2 w-3 h-3 bg-white rotate-45"></div>
           </div>
       </motion.a>
+
+      {/* 5. DETAIL MODAL (POPUP / BOTTOM SHEET) */}
+      <AnimatePresence>
+        {selectedItem && (
+            <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="fixed inset-0 z-[70] bg-black/80 backdrop-blur-md flex items-end md:items-center justify-center p-0 md:p-4"
+                onClick={() => setSelectedItem(null)}
+            >
+                <motion.div
+                    initial={{ y: "100%", opacity: 0, scale: 0.9 }}
+                    animate={{ y: 0, opacity: 1, scale: 1 }}
+                    exit={{ y: "100%", opacity: 0, scale: 0.9 }}
+                    transition={{ type: "spring", damping: 25, stiffness: 300 }}
+                    className="bg-[#1a1a1a] w-full md:max-w-lg rounded-t-2xl md:rounded-2xl border border-gray-800 overflow-hidden flex flex-col max-h-[90vh] shadow-2xl relative"
+                    onClick={(e) => e.stopPropagation()}
+                >
+                    {/* Header Image */}
+                    <div className="relative aspect-video bg-black shrink-0">
+                        <img 
+                            src={selectedItem.image} 
+                            alt={selectedItem.title} 
+                            className={`w-full h-full object-cover ${selectedItem.status === 'resolved' ? 'grayscale opacity-50 blur-[2px]' : ''}`}
+                            onError={(e) => { (e.target as HTMLImageElement).src = "https://placehold.co/600x400/121212/333?text=Community"; }}
+                        />
+                        
+                        {/* Close Button */}
+                        <button 
+                            onClick={() => setSelectedItem(null)}
+                            className="absolute top-4 right-4 z-30 bg-black/50 text-white p-2 rounded-full hover:bg-white hover:text-black transition-colors"
+                        >
+                            <X size={20} />
+                        </button>
+
+                        {/* Resolved Stamp - Centered */}
+                        {selectedItem.status === 'resolved' && (
+                             <div className="absolute inset-0 flex items-center justify-center z-20">
+                                 <div className="border-4 border-white text-white text-2xl font-black uppercase px-6 py-2 -rotate-12 tracking-widest opacity-90 shadow-lg">
+                                     {selectedItem.type === 'sos' ? 'ĐÃ TÌM THẤY' : 'ĐÃ TẶNG'}
+                                 </div>
+                             </div>
+                        )}
+                    </div>
+
+                    {/* Content Body */}
+                    <div className="p-6 overflow-y-auto custom-scrollbar flex-1 bg-[#1E1E1E]">
+                        {/* Badges */}
+                        <div className="flex items-center gap-2 mb-3">
+                             {selectedItem.type === 'sos' && (
+                                <span className="bg-red-600 text-white text-xs font-black px-3 py-1 rounded-md uppercase animate-pulse">
+                                    KHẨN CẤP / TÌM ĐỒ
+                                </span>
+                             )}
+                             {selectedItem.type === 'free' && (
+                                <span className="bg-green-600 text-white text-xs font-black px-3 py-1 rounded-md uppercase">
+                                    TẶNG MIỄN PHÍ
+                                </span>
+                             )}
+                             {selectedItem.type === 'news' && (
+                                <span className="bg-blue-600 text-white text-xs font-black px-3 py-1 rounded-md uppercase">
+                                    TIN TỨC XÃ
+                                </span>
+                             )}
+                        </div>
+
+                        <h2 className="text-2xl font-bold text-white leading-tight mb-4">
+                            {selectedItem.title}
+                        </h2>
+
+                        {/* Meta Info */}
+                        <div className="flex flex-wrap gap-4 text-sm text-gray-400 mb-6 pb-6 border-b border-gray-800">
+                             <div className="flex items-center gap-2">
+                                 <Calendar size={16} />
+                                 <span>{selectedItem.time}</span>
+                             </div>
+                             <div className="flex items-center gap-2">
+                                 <MapPin size={16} className="text-brand-cyan" />
+                                 <span className="text-gray-300 font-medium">{selectedItem.location}</span>
+                             </div>
+                        </div>
+
+                        {/* Description */}
+                        <div>
+                             <h4 className="text-brand-cyan font-bold uppercase text-xs mb-3">Chi tiết nội dung</h4>
+                             <p className="text-gray-300 text-base leading-relaxed whitespace-pre-line">
+                                 {selectedItem.description}
+                             </p>
+                        </div>
+                    </div>
+
+                    {/* Sticky Footer Actions */}
+                    <div className="p-4 bg-[#121212] border-t border-gray-800 grid grid-cols-2 gap-3 shrink-0">
+                        <a 
+                            href={`tel:${selectedItem.phone}`}
+                            className={`flex items-center justify-center gap-2 py-3.5 rounded-xl text-sm font-bold uppercase transition-all shadow-lg active:scale-95 ${
+                                selectedItem.status === 'resolved' 
+                                ? "bg-gray-700 text-gray-500 cursor-not-allowed" 
+                                : "bg-gradient-to-r from-green-600 to-emerald-600 text-white hover:shadow-green-900/30"
+                            }`}
+                        >
+                             <Phone size={18} fill="currentColor" /> Liên hệ ngay
+                        </a>
+                        <button 
+                            onClick={handleZaloShare}
+                            className="flex items-center justify-center gap-2 bg-blue-600 text-white py-3.5 rounded-xl text-sm font-bold uppercase hover:bg-blue-500 transition-all shadow-lg active:scale-95"
+                        >
+                             <Share2 size={18} /> Chia sẻ Zalo
+                        </button>
+                    </div>
+
+                </motion.div>
+            </motion.div>
+        )}
+      </AnimatePresence>
 
     </div>
   );
