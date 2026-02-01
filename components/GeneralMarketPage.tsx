@@ -31,7 +31,7 @@ interface MarketItem {
   image: string;        // anh_san_pham
   seller: string;       // nguoi_ban
   phone: string;        // sdt_lien_he
-  category: string;     // phan_loai
+  category: string;     // loai_hang (Mapped to: GiaDung, ThoiTrang, CongNghe...)
   status: 'ConHang' | 'DaBan'; // tinh_trang
   isNew: boolean;       // trang_thai == 'Moi'
   discount: string;     // giam_gia (VD: -20%)
@@ -41,14 +41,14 @@ interface MarketItem {
 // 1. NGUỒN DỮ LIỆU
 const SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRJrotBdzd-po6z_Zd6fbew0pqGgdDdZjRMf7vutpfJia2aFpNyTZNdvGZxN4MfcGtRwJWUrmICvZMF/pub?gid=964173450&single=true&output=csv";
 
-// 2. DANH MỤC LỌC (Cập nhật Nông sản -> Công Nghệ)
+// 2. DANH MỤC LỌC (Cập nhật ID theo yêu cầu Logic)
 const categories = [
   { id: "all", name: "Tất cả", icon: <Package size={16} /> },
-  { id: "gia_dung", name: "Gia Dụng", icon: <Home size={16} /> },
-  { id: "thoi_trang", name: "Thời trang", icon: <Tag size={16} /> },
-  { id: "cong_nghe", name: "Công Nghệ", icon: <Smartphone size={16} /> },
-  { id: "do_cu", name: "Đồ cũ / Thanh lý", icon: <RefreshCw size={16} /> },
-  { id: "khac", name: "Khác", icon: <Zap size={16} /> },
+  { id: "GiaDung", name: "Gia Dụng", icon: <Home size={16} /> },
+  { id: "ThoiTrang", name: "Thời trang", icon: <Tag size={16} /> },
+  { id: "CongNghe", name: "Công Nghệ", icon: <Smartphone size={16} /> },
+  { id: "DoCu", name: "Đồ cũ / Thanh lý", icon: <RefreshCw size={16} /> },
+  { id: "Khac", name: "Khác", icon: <Zap size={16} /> },
 ];
 
 const GeneralMarketPage: React.FC<GeneralMarketPageProps> = ({ onBack }) => {
@@ -57,6 +57,22 @@ const GeneralMarketPage: React.FC<GeneralMarketPageProps> = ({ onBack }) => {
   const [items, setItems] = useState<MarketItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Helper: Chuẩn hóa danh mục từ CSV đầu vào sang Mã chuẩn
+  const normalizeCategory = (input: string): string => {
+      if (!input) return "Khac";
+      const s = input.toLowerCase().replace(/\s/g, ''); // Xóa khoảng trắng, chữ thường
+      // Remove accents
+      const norm = s.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+
+      if (norm.includes('giadung')) return 'GiaDung';
+      if (norm.includes('thoitrang')) return 'ThoiTrang';
+      if (norm.includes('congnghe')) return 'CongNghe';
+      if (norm.includes('docu') || norm.includes('thanhly') || norm.includes('cu')) return 'DoCu';
+      
+      // Nếu không khớp các key trên, trả về Khac (hoặc giữ nguyên nếu muốn mở rộng)
+      return 'Khac';
+  };
 
   // 3. PARSE CSV DATA
   const parseCSV = (text: string): MarketItem[] => {
@@ -83,7 +99,7 @@ const GeneralMarketPage: React.FC<GeneralMarketPageProps> = ({ onBack }) => {
     const idxImage = getIndex(['anh_san_pham', 'anh', 'image']);
     const idxSeller = getIndex(['nguoi_ban', 'seller', 'shop']);
     const idxPhone = getIndex(['sdt_lien_he', 'sdt', 'phone']);
-    const idxCategory = getIndex(['phan_loai', 'loai', 'category']);
+    const idxCategory = getIndex(['loai_hang', 'phan_loai', 'loai', 'category']); // Ưu tiên 'loai_hang'
     const idxStatus = getIndex(['tinh_trang', 'status']); // Con Hang / Da Ban
     const idxNew = getIndex(['trang_thai', 'condition']); // Moi / Cu
     const idxDiscount = getIndex(['giam_gia', 'discount', 'sale']);
@@ -101,6 +117,10 @@ const GeneralMarketPage: React.FC<GeneralMarketPageProps> = ({ onBack }) => {
             const rawNew = getCol(idxNew).toLowerCase();
             const isNew = rawNew.includes('moi') || rawNew.includes('new') || rawNew.includes('mới');
 
+            // Xử lý Category chuẩn hóa
+            const rawCat = getCol(idxCategory);
+            const normalizedCat = normalizeCategory(rawCat);
+
             return {
                 id: `market-${index}`,
                 name: getCol(idxName) || "Sản phẩm chưa đặt tên",
@@ -108,7 +128,7 @@ const GeneralMarketPage: React.FC<GeneralMarketPageProps> = ({ onBack }) => {
                 image: getCol(idxImage) || "https://placehold.co/400x400/1a1a1a/00FFFF?text=Cho+Thanh+Loi",
                 seller: getCol(idxSeller) || "Người bán Thạnh Lợi",
                 phone: getCol(idxPhone),
-                category: getCol(idxCategory), 
+                category: normalizedCat, 
                 status: status,
                 isNew: isNew,
                 discount: getCol(idxDiscount),
@@ -146,20 +166,15 @@ const GeneralMarketPage: React.FC<GeneralMarketPageProps> = ({ onBack }) => {
     fetchData();
   }, []);
 
-  // 4. LOGIC FILTER THÔNG MINH
+  // 4. LOGIC FILTER CHÍNH XÁC (STRICT MATCHING)
   const filteredItems = items.filter(item => {
-    // Mapping category CSV to UI filters (Fuzzy matching)
+    // Logic 1: Lọc theo Category ID
     let matchesCategory = true;
     if (activeCategory !== "all") {
-        const catLower = item.category.toLowerCase();
-        if (activeCategory === "gia_dung") matchesCategory = catLower.includes("gia dụng") || catLower.includes("bếp") || catLower.includes("nồi") || catLower.includes("nhà") || catLower.includes("thiết bị");
-        else if (activeCategory === "thoi_trang") matchesCategory = catLower.includes("áo") || catLower.includes("quần") || catLower.includes("mặc");
-        else if (activeCategory === "cong_nghe") matchesCategory = catLower.includes("điện thoại") || catLower.includes("máy") || catLower.includes("iphone") || catLower.includes("samsung") || catLower.includes("loa") || catLower.includes("tai nghe") || catLower.includes("camera") || catLower.includes("phụ kiện");
-        else if (activeCategory === "do_cu") matchesCategory = catLower.includes("cũ") || catLower.includes("thanh lý") || catLower.includes("xe");
-        else if (activeCategory === "khac") matchesCategory = !catLower.includes("gia dụng") && !catLower.includes("áo") && !catLower.includes("điện thoại") && !catLower.includes("cũ");
+        matchesCategory = item.category === activeCategory;
     }
 
-    // Filter Search
+    // Logic 2: Lọc theo Search Term
     const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
                           item.seller.toLowerCase().includes(searchTerm.toLowerCase());
     
@@ -235,9 +250,16 @@ const GeneralMarketPage: React.FC<GeneralMarketPageProps> = ({ onBack }) => {
         )}
 
         {!isLoading && filteredItems.length === 0 && (
-            <div className="text-center py-20 text-gray-600">
-                <Package size={64} className="mx-auto mb-4 opacity-20" />
-                <p>Không tìm thấy sản phẩm nào.</p>
+            <div className="text-center py-20 text-gray-500 flex flex-col items-center">
+                <Package size={64} className="mb-4 opacity-20 text-brand-cyan" />
+                <p className="text-lg font-bold text-gray-300">Chưa có sản phẩm nào trong mục này</p>
+                <p className="text-sm mt-1">Mời bà con đăng tin!</p>
+                <button 
+                  onClick={() => setActiveCategory('all')} 
+                  className="mt-6 text-brand-cyan font-bold uppercase text-xs hover:underline"
+                >
+                  Xem tất cả sản phẩm
+                </button>
             </div>
         )}
 
@@ -248,6 +270,7 @@ const GeneralMarketPage: React.FC<GeneralMarketPageProps> = ({ onBack }) => {
                 return (
                     <motion.div
                         key={item.id}
+                        layout // Framer Motion layout prop for smooth reordering
                         initial={{ opacity: 0, y: 50 }}
                         whileInView={{ opacity: 1, y: 0 }}
                         viewport={{ once: true, margin: "-50px" }}
