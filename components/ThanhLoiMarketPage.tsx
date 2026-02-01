@@ -1,24 +1,30 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { 
   ArrowLeft, 
   Search, 
   MapPin, 
-  ShoppingBag, 
-  Utensils, 
-  Wrench, 
-  Briefcase, 
-  Car, 
-  Home, 
-  Bell, 
-  User, 
-  LayoutGrid, 
-  Heart,
-  Store,
-  Zap,
-  Tag
+  Phone, 
+  MessageCircle, 
+  PlusCircle,
+  Utensils,
+  Wrench,
+  Shirt,
+  Briefcase,
+  Car,
+  Home,
+  Star,
+  Camera,
+  Music,
+  RefreshCw,
+  XCircle,
+  AlertCircle,
+  User,
+  ChevronDown,
+  ShoppingBag
 } from 'lucide-react';
+import Footer from './Footer';
 
 interface ThanhLoiMarketPageProps {
   onBack: () => void;
@@ -31,236 +37,708 @@ interface ThanhLoiMarketPageProps {
   onOpenGeneralMarket?: () => void;
 }
 
+// Interface chuẩn cho Listing hiển thị ở trang chủ
+interface MarketListing {
+  id: string | number;
+  title: string;
+  price: string;
+  seller: string;
+  location: string;
+  image: string;
+  category: string;
+  phone?: string;
+  isAd?: boolean;
+  timestamp?: number;
+  type: 'food' | 'service' | 'job' | 'other'; // Để phân loại giao diện thẻ
+  linkProfile?: string; // Link Profile cho Service
+}
+
+// 1. CẤU HÌNH LINK GOOGLE SHEET (CSV)
+const SHEET_URLS = {
+    FOOD: "https://docs.google.com/spreadsheets/d/e/2PACX-1vRJrotBdzd-po6z_Zd6fbew0pqGgdDdZjRMf7vutpfJia2aFpNyTZNdvGZxN4MfcGtRwJWUrmICvZMF/pub?gid=0&single=true&output=csv",
+    SERVICES: "https://docs.google.com/spreadsheets/d/e/2PACX-1vRJrotBdzd-po6z_Zd6fbew0pqGgdDdZjRMf7vutpfJia2aFpNyTZNdvGZxN4MfcGtRwJWUrmICvZMF/pub?gid=987608880&single=true&output=csv", 
+    JOBS: "https://docs.google.com/spreadsheets/d/e/2PACX-1vRJrotBdzd-po6z_Zd6fbew0pqGgdDdZjRMf7vutpfJia2aFpNyTZNdvGZxN4MfcGtRwJWUrmICvZMF/pub?gid=1687973723&single=true&output=csv",     
+    REAL_ESTATE: "" 
+};
+
+// Dữ liệu danh mục
+const categories = [
+  { id: 1, name: "Chợ Mua Sắm", icon: <ShoppingBag size={24} />, color: "bg-teal-100 text-teal-600" },
+  { id: 2, name: "Ẩm Thực", icon: <Utensils size={24} />, color: "bg-orange-100 text-orange-600" },
+  { id: 3, name: "Dịch Vụ", icon: <Wrench size={24} />, color: "bg-blue-100 text-blue-600" },
+  { id: 4, name: "Việc Làm", icon: <Briefcase size={24} />, color: "bg-green-100 text-green-600" }, 
+  { 
+    id: 5, 
+    name: "KYO MALL", 
+    icon: <Star size={24} />, 
+    color: "bg-pink-100 text-pink-600",
+    subtitle: "(Giao thương All Vietnam)"
+  },
+  { id: 6, name: "Xe Cộ", icon: <Car size={24} />, color: "bg-red-100 text-red-600" },
+  { id: 7, name: "Bất động sản", icon: <Home size={24} />, color: "bg-purple-100 text-purple-600" },
+];
+
 const ThanhLoiMarketPage: React.FC<ThanhLoiMarketPageProps> = ({ 
   onBack, 
   onOpenFood, 
   onOpenServices, 
   onOpenJobs, 
   onOpenRealEstate,
-  onOpenVehicles, 
+  onOpenFashion,
+  onOpenVehicles,
   onOpenGeneralMarket
 }) => {
-  const [activeTab, setActiveTab] = useState('home');
+  const [searchTerm, setSearchTerm] = useState("");
+  const [listings, setListings] = useState<MarketListing[]>([]);
+  const [searchResults, setSearchResults] = useState<MarketListing[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  
+  // PAGINATION STATE
+  const [visibleCount, setVisibleCount] = useState(12);
 
-  // Danh mục dịch vụ (Icon Grid)
-  const categories = [
-    { id: 'food', label: 'Ẩm thực', icon: <Utensils size={24} />, color: 'text-orange-500', bg: 'bg-orange-50', action: onOpenFood },
-    { id: 'market', label: 'Đi chợ', icon: <Store size={24} />, color: 'text-green-600', bg: 'bg-green-50', action: onOpenGeneralMarket },
-    { id: 'services', label: 'Dịch vụ', icon: <Wrench size={24} />, color: 'text-blue-500', bg: 'bg-blue-50', action: onOpenServices },
-    { id: 'jobs', label: 'Việc làm', icon: <Briefcase size={24} />, color: 'text-purple-500', bg: 'bg-purple-50', action: onOpenJobs },
-    { id: 'vehicles', label: 'Xe cộ', icon: <Car size={24} />, color: 'text-red-500', bg: 'bg-red-50', action: onOpenVehicles },
-    { id: 'real_estate', label: 'Nhà đất', icon: <Home size={24} />, color: 'text-yellow-600', bg: 'bg-yellow-50', action: onOpenRealEstate },
-  ];
+  // --- HELPER: Xử lý Tiếng Việt không dấu ---
+  const removeVietnameseTones = (str: string) => {
+    str = str.replace(/à|á|ạ|ả|ã|â|ầ|ấ|ậ|ẩ|ẫ|ă|ằ|ắ|ặ|ẳ|ẵ/g,"a"); 
+    str = str.replace(/è|é|ẹ|ẻ|ẽ|ê|ề|ế|ệ|ể|ễ/g,"e"); 
+    str = str.replace(/ì|í|ị|ỉ|ĩ/g,"i"); 
+    str = str.replace(/ò|ó|ọ|ỏ|õ|ô|ồ|ố|ộ|ổ|ỗ|ơ|ờ|ớ|ợ|ở|ỡ/g,"o"); 
+    str = str.replace(/ù|ú|ụ|ủ|ũ|ư|ừ|ứ|ự|ử|ữ/g,"u"); 
+    str = str.replace(/ỳ|ý|ỵ|ỷ|ỹ/g,"y"); 
+    str = str.replace(/đ/g,"d");
+    str = str.replace(/À|Á|Ạ|Ả|Ã|Â|Ầ|Ấ|Ậ|Ẩ|Ẫ|Ă|Ằ|Ắ|Ặ|Ẳ|Ẵ/g, "A");
+    str = str.replace(/È|É|Ẹ|Ẻ|Ẽ|Ê|Ề|Ế|Ệ|Ể|Ễ/g, "E");
+    str = str.replace(/Ì|Í|Ị|Ỉ|Ĩ/g, "I");
+    str = str.replace(/Ò|Ó|Ọ|Ỏ|Õ|Ô|Ồ|Ố|Ộ|Ổ|Ỗ|Ơ|Ờ|Ớ|Ợ|Ở|Ỡ/g, "O");
+    str = str.replace(/Ù|Ú|Ụ|Ủ|Ũ|Ư|Ừ|Ứ|Ự|Ử|Ữ/g, "U");
+    str = str.replace(/Ỳ|Ý|Ỵ|Ỷ|Ỹ/g, "Y");
+    str = str.replace(/Đ/g, "D");
+    return str.toLowerCase().trim();
+  }
 
-  // Từ khóa Hot
-  const hotKeywords = ["#CơmTấm", "#ViệcLàm", "#XeCũ", "#NhàĐất", "#RauSạch"];
+  // Helper: Normalize Header
+  const normalizeHeader = (str: string) => {
+    return str.toLowerCase()
+      .normalize("NFD").replace(/[\u0300-\u036f]/g, "") 
+      .replace(/[^a-z0-9]/g, "");
+  };
 
-  // Dữ liệu mẫu cho Feed "Tin Mới Đăng" (Giả lập dữ liệu gộp để đảm bảo ổn định)
-  const feedItems = [
-    {
-      id: 1,
-      title: "Cơm Tấm Sườn Bì Chả",
-      price: "35.000đ",
-      location: "Ấp 3, Thạnh Lợi",
-      image: "https://images.unsplash.com/photo-1595589833215-d56795c3788a?auto=format&fit=crop&q=80&w=400",
-      tag: "Ẩm thực",
-      time: "Vừa đăng"
-    },
-    {
-      id: 2,
-      title: "Tuyển 5 Thợ Hồ (Lương Tuần)",
-      price: "500.000đ/ngày",
-      location: "Khu dân cư Mới",
-      image: "https://images.unsplash.com/photo-1503387762-592deb58ef4e?auto=format&fit=crop&q=80&w=400",
-      tag: "Việc làm",
-      time: "1 giờ trước"
-    },
-    {
-      id: 3,
-      title: "Honda Wave Alpha 2022 Chính chủ",
-      price: "14.500.000đ",
-      location: "Chợ Thạnh Lợi",
-      image: "https://images.unsplash.com/photo-1558981403-c5f9899a28bc?auto=format&fit=crop&q=80&w=400",
-      tag: "Xe cộ",
-      time: "2 giờ trước"
-    },
-    {
-      id: 4,
-      title: "Bán đất vườn 1000m2 giá ngộp",
-      price: "850 Triệu",
-      location: "Đường Kênh Xáng",
-      image: "https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&q=80&w=400",
-      tag: "BĐS",
-      time: "3 giờ trước"
+  // Helper: Parse CSV Line safely
+  const parseCSVLine = (line: string): string[] => {
+      const parts = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
+      return parts.map(part => {
+          let p = part.trim();
+          if (p.startsWith('"') && p.endsWith('"')) p = p.slice(1, -1);
+          return p.replace(/""/g, '"');
+      });
+  };
+
+  // --- MAIN DATA FETCHING ---
+  useEffect(() => {
+    const fetchAllData = async () => {
+        setIsLoading(true);
+        let allNewListings: MarketListing[] = [];
+
+        // 1. Fetch Food Data
+        if (SHEET_URLS.FOOD) {
+            try {
+                const response = await fetch(SHEET_URLS.FOOD);
+                if (response.ok) {
+                    const text = await response.text();
+                    const rows = text.split('\n');
+                    if (rows.length > 1) {
+                        const headers = parseCSVLine(rows[0]);
+                        const getIndex = (keys: string[]) => headers.findIndex(h => keys.includes(normalizeHeader(h)));
+
+                        const idxName = getIndex(['monan', 'tenmon']);
+                        const idxImage = getIndex(['anhmonan', 'hinhanh', 'image']);
+                        const idxPrice = getIndex(['giatien', 'gia']);
+                        const idxShop = getIndex(['tenquan', 'shop']);
+                        const idxPhone = getIndex(['sdtzalo', 'sdt']);
+                        const idxStatus = getIndex(['trangthai']);
+                        const idxAddress = getIndex(['diachi']);
+
+                        const foodItems: MarketListing[] = rows.slice(1)
+                            .filter(r => r.trim() !== '')
+                            .map((row, index): MarketListing | null => {
+                                const cols = parseCSVLine(row);
+                                const getCol = (idx: number) => (idx !== -1 && cols[idx] ? cols[idx].trim() : "");
+                                
+                                if (getCol(idxStatus).toLowerCase() === 'het') return null;
+
+                                const rawPrice = getCol(idxPrice);
+                                const priceNum = parseInt(rawPrice.replace(/\D/g, ''));
+                                const displayPrice = isNaN(priceNum) || priceNum === 0 ? "Liên hệ" : `${priceNum.toLocaleString('vi-VN')} đ`;
+
+                                return {
+                                    id: `food-${index}`,
+                                    title: getCol(idxName) || "Món ngon",
+                                    image: getCol(idxImage) || "https://placehold.co/600x400?text=Food",
+                                    price: displayPrice,
+                                    seller: getCol(idxShop) || "Cửa hàng",
+                                    location: getCol(idxAddress) || "Thạnh Lợi",
+                                    category: "Ẩm Thực",
+                                    phone: getCol(idxPhone),
+                                    isAd: false,
+                                    timestamp: Date.now() + index,
+                                    type: 'food'
+                                };
+                            })
+                            .filter((item): item is MarketListing => item !== null);
+                        
+                        // REVERSE: Đảo ngược mảng để tin mới nhất (cuối CSV) lên đầu
+                        allNewListings = [...allNewListings, ...foodItems.reverse()];
+                    }
+                }
+            } catch (error) {
+                console.error("Error fetching food sheet:", error);
+            }
+        }
+
+        // 2. Fetch Services Data
+        if (SHEET_URLS.SERVICES) {
+            try {
+                const response = await fetch(SHEET_URLS.SERVICES);
+                if (response.ok) {
+                    const text = await response.text();
+                    const rows = text.split('\n');
+                    if (rows.length > 1) {
+                        const headers = parseCSVLine(rows[0]);
+                        const getIndex = (keys: string[]) => headers.findIndex(h => keys.includes(normalizeHeader(h)));
+                        
+                        const idxCategory = getIndex(['loaidichvu', 'nghanhnghe']);
+                        const idxName = getIndex(['tentho', 'hoten', 'ten']);
+                        const idxLocation = getIndex(['diachi']);
+                        const idxPhone = getIndex(['sdt']);
+                        const idxImage = getIndex(['anhdaidien', 'anh', 'avatar']);
+                        const idxProfile = getIndex(['linkprofile', 'link_profile', 'profile', 'web']);
+
+                        const serviceItems: MarketListing[] = rows.slice(1)
+                            .filter(r => r.trim() !== '')
+                            .map((row, index): MarketListing => {
+                                const cols = parseCSVLine(row);
+                                const getCol = (idx: number) => (idx !== -1 && cols[idx] ? cols[idx].trim() : "");
+
+                                return {
+                                    id: `service-${index}`,
+                                    title: getCol(idxName) || "Dịch vụ", 
+                                    image: getCol(idxImage) || "", 
+                                    price: "Liên hệ", 
+                                    seller: getCol(idxCategory) || "Thợ lành nghề",
+                                    location: getCol(idxLocation) || "Thạnh Lợi",
+                                    category: "Dịch Vụ",
+                                    phone: getCol(idxPhone),
+                                    isAd: false,
+                                    timestamp: Date.now() + index + 100,
+                                    type: 'service',
+                                    linkProfile: getCol(idxProfile)
+                                };
+                            });
+
+                         // REVERSE
+                         allNewListings = [...allNewListings, ...serviceItems.reverse()];
+                    }
+                }
+            } catch (error) {
+                console.error("Error fetching services sheet:", error);
+            }
+        }
+
+        // 3. Fetch Jobs Data
+        if (SHEET_URLS.JOBS) {
+            try {
+                const response = await fetch(SHEET_URLS.JOBS);
+                if (response.ok) {
+                    const text = await response.text();
+                    const rows = text.split('\n');
+                    if (rows.length > 1) {
+                        const headers = parseCSVLine(rows[0]);
+                        const getIndex = (keys: string[]) => headers.findIndex(h => keys.includes(normalizeHeader(h)));
+                        
+                        const idxTitle = getIndex(['congviec', 'tieude']);
+                        const idxSalary = getIndex(['mucluong', 'luong']);
+                        const idxEmployer = getIndex(['nguoituyen', 'nguoithue']);
+                        const idxLocation = getIndex(['diachi', 'diadiem']);
+                        const idxPhone = getIndex(['sdt', 'sdtlienhe']);
+
+                        const jobItems: MarketListing[] = rows.slice(1)
+                            .filter(r => r.trim() !== '')
+                            .map((row, index): MarketListing => {
+                                const cols = parseCSVLine(row);
+                                const getCol = (idx: number) => (idx !== -1 && cols[idx] ? cols[idx].trim() : "");
+
+                                return {
+                                    id: `job-${index}`,
+                                    title: getCol(idxTitle) || "Việc làm",
+                                    image: "https://images.unsplash.com/photo-1504307651254-35680f356dfd?auto=format&fit=crop&q=80&w=600",
+                                    price: getCol(idxSalary) || "Thỏa thuận",
+                                    seller: getCol(idxEmployer) || "Tuyển dụng",
+                                    location: getCol(idxLocation) || "Thạnh Lợi",
+                                    category: "Việc Làm",
+                                    phone: getCol(idxPhone),
+                                    isAd: false,
+                                    timestamp: Date.now() + index + 200,
+                                    type: 'job'
+                                };
+                            });
+
+                         // REVERSE
+                         allNewListings = [...allNewListings, ...jobItems.reverse()];
+                    }
+                }
+            } catch (error) {
+                console.error("Error fetching jobs sheet:", error);
+            }
+        }
+        
+        // Lưu toàn bộ dữ liệu vào listings
+        setListings(allNewListings);
+        setIsLoading(false);
+    };
+
+    fetchAllData();
+  }, []);
+
+  const handleCategoryClick = (catName: string) => {
+    if (catName === "Ẩm Thực" && onOpenFood) {
+        onOpenFood();
+    } else if (catName === "Dịch Vụ" && onOpenServices) {
+        onOpenServices();
+    } else if (catName === "Việc Làm" && onOpenJobs) {
+        onOpenJobs();
+    } else if (catName === "Bất động sản" && onOpenRealEstate) {
+        onOpenRealEstate();
+    } else if (catName === "KYO MALL" && onOpenFashion) {
+        onOpenFashion();
+    } else if (catName === "Xe Cộ" && onOpenVehicles) {
+        onOpenVehicles();
+    } else if (catName === "Chợ Mua Sắm" && onOpenGeneralMarket) {
+        onOpenGeneralMarket();
     }
-  ];
+  };
+
+  // --- SMART SEARCH LOGIC ---
+  const handleSearch = () => {
+    if (!searchTerm.trim()) {
+        setIsSearching(false);
+        setVisibleCount(12); // Reset pagination on clear
+        return;
+    }
+
+    setIsSearching(true);
+    setVisibleCount(12); // Reset pagination for search results
+    const query = removeVietnameseTones(searchTerm);
+
+    const results = listings.filter(item => {
+        return removeVietnameseTones(item.title).includes(query) || 
+               removeVietnameseTones(item.seller).includes(query) ||
+               removeVietnameseTones(item.category).includes(query);
+    });
+
+    setSearchResults(results);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+        handleSearch();
+    }
+  };
+
+  const clearSearch = () => {
+      setSearchTerm("");
+      setIsSearching(false);
+      setSearchResults([]);
+      setVisibleCount(12);
+  };
+
+  // --- PAGINATION LOGIC (LOAD MORE) ---
+  const handleLoadMore = () => {
+      setVisibleCount(prev => prev + 12);
+  };
+
+  // Xác định nguồn dữ liệu đang hiển thị (Search hay List chính)
+  const currentSource = isSearching ? searchResults : listings;
+  // Cắt mảng theo visibleCount
+  const displayListings = currentSource.slice(0, visibleCount);
 
   return (
-    <div className="fixed inset-0 z-50 bg-[#F5F7FA] overflow-y-auto overflow-x-hidden custom-scrollbar font-sans text-gray-800 pb-20">
-       
-       {/* A. HEADER */}
-       <div className="sticky top-0 z-50 bg-white px-4 py-3 flex items-center justify-between shadow-sm">
-          <div className="flex items-center gap-3">
-             <button onClick={onBack} className="text-gray-600 hover:text-green-600 transition-colors p-1 rounded-full hover:bg-gray-100">
+    <div className="bg-gray-50 min-h-screen font-sans text-gray-900">
+      {/* 1. HEADER (Cyberpunk Style - Dark) */}
+      <div className="sticky top-0 z-50 bg-[#050505]/95 backdrop-blur-md border-b border-gray-800 h-16 flex items-center justify-between px-4 md:px-8 shadow-md">
+         <div className="flex items-center gap-4">
+            <button 
+                onClick={onBack}
+                className="text-white hover:text-brand-cyan transition-colors"
+            >
                 <ArrowLeft size={24} />
-             </button>
-             <div className="flex flex-col">
-                <span className="text-green-600 font-black text-lg leading-none tracking-tight">
-                   CHỢ ONLINE
-                </span>
-                <span className="text-gray-500 text-[10px] font-bold uppercase tracking-widest flex items-center gap-1">
-                   <MapPin size={10} /> Thạnh Lợi - Bến Lức - Tây Ninh
-                </span>
-             </div>
-          </div>
-          <div className="flex items-center gap-3">
-             <button className="relative p-2 text-gray-600 hover:bg-gray-100 rounded-full transition-colors">
-                <ShoppingBag size={24} />
-                <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
-             </button>
-             <button className="p-2 text-gray-600 hover:bg-gray-100 rounded-full transition-colors">
-                <Bell size={24} />
-             </button>
-          </div>
-       </div>
-
-      <div className="max-w-xl mx-auto">
-        
-        {/* B. HERO SECTION (SEARCH) */}
-        <div className="bg-white px-4 pt-4 pb-6 rounded-b-3xl shadow-[0_4px_20px_rgba(0,0,0,0.03)] mb-6">
-             <div className="relative group mb-4">
-                 <div className="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none">
-                    <Search className="w-5 h-5 text-gray-400 group-focus-within:text-green-600 transition-colors" />
-                 </div>
-                 <input 
-                    type="text" 
-                    placeholder="Hôm nay bạn muốn tìm gì?" 
-                    className="block w-full p-4 pl-12 text-sm text-gray-900 border border-gray-100 rounded-xl bg-gray-50 focus:ring-2 focus:ring-green-100 focus:border-green-500 focus:bg-white transition-all shadow-inner outline-none" 
-                 />
-                 <button className="absolute inset-y-1 right-1 bg-green-600 text-white px-4 rounded-lg text-sm font-bold hover:bg-green-500 transition-colors shadow-md">
-                    Tìm
-                 </button>
-             </div>
-
-             {/* Hot Keywords */}
-             <div className="flex gap-2 overflow-x-auto scrollbar-hide">
-                <div className="flex items-center gap-1 text-xs font-bold text-red-500 mr-1 whitespace-nowrap">
-                   <Zap size={14} fill="currentColor" /> HOT:
+            </button>
+            <div className="flex items-center gap-2">
+                <div className="bg-green-600 p-1.5 rounded-lg">
+                    <MapPin size={16} className="text-white" />
                 </div>
-                {hotKeywords.map((kw, i) => (
-                   <span key={i} className="px-3 py-1 bg-gray-100 text-gray-600 text-xs rounded-full whitespace-nowrap border border-gray-200 cursor-pointer hover:bg-green-50 hover:text-green-600 hover:border-green-200 transition-colors">
-                      {kw}
-                   </span>
-                ))}
-             </div>
-        </div>
+                <span className="font-bold text-white tracking-tight text-lg">
+                    CHỢ ONLINE <span className="text-green-500">THẠNH LỢI</span>
+                </span>
+            </div>
+         </div>
+         
+         {/* Updated Post Button: Direct Link to Zalo */}
+         <a 
+            href="https://zalo.me/0386328473"
+            target="_blank"
+            rel="noreferrer"
+            className="bg-green-600 hover:bg-green-500 text-white px-4 py-2 rounded-full font-bold text-xs uppercase flex items-center gap-2 transition-colors shadow-lg shadow-green-900/20"
+         >
+            <PlusCircle size={16} /> <span className="hidden md:inline">Đăng tin</span>
+         </a>
+      </div>
 
-        {/* C. CATEGORIES GRID */}
-        <div className="px-4 mb-8">
-            <h3 className="font-bold text-gray-800 text-base mb-4 px-1">Danh mục chính</h3>
-            <div className="grid grid-cols-3 gap-y-6 gap-x-4">
-                {categories.map((cat) => (
-                    <motion.div
-                        key={cat.id}
-                        whileTap={{ scale: 0.95 }}
-                        onClick={cat.action}
-                        className="flex flex-col items-center gap-2 cursor-pointer group"
+      {/* 2. HERO SECTION */}
+      <section className="relative bg-white border-b border-gray-200">
+        <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-5"></div>
+        <div className="max-w-7xl mx-auto px-4 py-12 md:py-16 text-center relative z-10">
+            <motion.h1 
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="text-3xl md:text-5xl font-black text-gray-900 mb-4 tracking-tight"
+            >
+                Kết nối giao thương <span className="text-green-600">Quê Nhà</span>
+            </motion.h1>
+            <p className="text-gray-500 mb-8 max-w-2xl mx-auto">
+                Tìm kiếm sản phẩm, dịch vụ và việc làm tại xã Thạnh Lợi nhanh chóng, uy tín và hoàn toàn miễn phí.
+            </p>
+
+            {/* Smart Search Bar */}
+            <div className="max-w-2xl mx-auto relative group">
+                <input 
+                    id="search-input"
+                    type="text" 
+                    placeholder="Bạn đang tìm gì? (VD: Cơm tấm, Thợ điện, Phụ hồ...)"
+                    className="w-full pl-12 pr-28 py-4 rounded-full border border-gray-300 shadow-lg focus:outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500 bg-white text-gray-900 transition-all"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    onKeyDown={handleKeyDown}
+                />
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-green-500 transition-colors" size={20} />
+                
+                <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-2">
+                    {searchTerm && (
+                        <button onClick={clearSearch} className="p-2 text-gray-400 hover:text-gray-600">
+                            <XCircle size={20} />
+                        </button>
+                    )}
+                    <button 
+                        onClick={handleSearch}
+                        className="bg-gray-900 text-white px-6 py-2 rounded-full font-bold text-sm hover:bg-black transition-colors"
                     >
-                        <div className={`w-14 h-14 rounded-2xl flex items-center justify-center ${cat.bg} ${cat.color} shadow-sm border border-transparent group-hover:border-current transition-all duration-300`}>
+                        Tìm kiếm
+                    </button>
+                </div>
+            </div>
+        </div>
+      </section>
+
+      {/* 3. CATEGORIES (Ẩn khi đang Search) */}
+      {!isSearching && (
+        <section className="max-w-7xl mx-auto px-4 py-10">
+            <div className="flex items-center justify-between mb-6">
+                <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+                    <Star className="text-yellow-500 fill-yellow-500" size={20} /> Danh mục phổ biến
+                </h2>
+            </div>
+            
+            <div className="grid grid-cols-3 md:grid-cols-6 gap-4">
+                {categories.map((cat) => (
+                    <motion.div 
+                        key={cat.id}
+                        whileHover={{ y: -5 }}
+                        onClick={() => handleCategoryClick(cat.name)}
+                        className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex flex-col items-center justify-center gap-3 cursor-pointer hover:shadow-md transition-all text-center h-full"
+                    >
+                        <div className={`p-3 rounded-full ${cat.color}`}>
                             {cat.icon}
                         </div>
-                        <span className="text-xs font-medium text-gray-600 group-hover:text-gray-900 text-center">
-                            {cat.label}
-                        </span>
+                        <div>
+                            <span className="text-sm font-semibold text-gray-700 block leading-tight">{cat.name}</span>
+                            {(cat as any).subtitle && (
+                                <span className="text-[9px] font-bold text-red-500 mt-1 block tracking-tight">{(cat as any).subtitle}</span>
+                            )}
+                        </div>
                     </motion.div>
                 ))}
             </div>
+        </section>
+      )}
+
+      {/* 4. BRAND BANNER (Feature Section - Redesigned) */}
+      {!isSearching && (
+          <section className="max-w-7xl mx-auto px-4 mb-10">
+            <div className="relative bg-[#050505] rounded-3xl overflow-hidden border border-gray-800 min-h-[400px] flex items-center justify-center text-center p-8 md:p-12">
+                
+                {/* Background Effects */}
+                <div className="absolute inset-0 z-0">
+                     {/* Cyberpunk Grid */}
+                     <div className="absolute inset-0 bg-[linear-gradient(to_right,#1f1f1f_1px,transparent_1px),linear-gradient(to_bottom,#1f1f1f_1px,transparent_1px)] bg-[size:2rem_2rem] opacity-20"></div>
+                     
+                     {/* Glows */}
+                     <div className="absolute top-0 left-1/4 w-64 h-64 bg-purple-600/20 blur-[100px] rounded-full"></div>
+                     <div className="absolute bottom-0 right-1/4 w-64 h-64 bg-brand-cyan/20 blur-[100px] rounded-full"></div>
+
+                     {/* Capybara Image - Floating/Blended */}
+                     <img 
+                        src="https://i.postimg.cc/TYspgn7T/Gemini-Generated-Image-bsnchxbsnchxbsnc.png" 
+                        alt="Capybara VR" 
+                        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[80%] md:w-[40%] object-contain opacity-10 mix-blend-screen" 
+                     />
+                </div>
+
+                {/* Content */}
+                <div className="relative z-10 max-w-4xl mx-auto">
+                    {/* Badge */}
+                    <motion.div 
+                        initial={{ opacity: 0, y: 20 }}
+                        whileInView={{ opacity: 1, y: 0 }}
+                        viewport={{ once: true }}
+                        className="inline-block mb-6"
+                    >
+                        <span className="bg-brand-cyan/10 border border-brand-cyan/30 text-brand-cyan text-[10px] md:text-xs font-black tracking-[0.2em] px-4 py-2 rounded-full uppercase backdrop-blur-md shadow-[0_0_15px_rgba(0,255,255,0.3)]">
+                            Future of Solopreneur
+                        </span>
+                    </motion.div>
+
+                    {/* Headline */}
+                    <motion.h3 
+                        initial={{ opacity: 0, scale: 0.9 }}
+                        whileInView={{ opacity: 1, scale: 1 }}
+                        viewport={{ once: true }}
+                        transition={{ delay: 0.1 }}
+                        className="text-3xl md:text-5xl lg:text-6xl font-black uppercase tracking-tighter mb-6 leading-none"
+                    >
+                        <span className="text-transparent bg-clip-text bg-gradient-to-b from-white via-gray-200 to-gray-500 drop-shadow-2xl">
+                            Tiên phong Kỷ nguyên
+                        </span>
+                        <br />
+                        <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-cyan via-white to-brand-cyan text-glow">
+                            Nội dung số & AI
+                        </span>
+                    </motion.h3>
+
+                    {/* Sub-headline */}
+                    <motion.p 
+                        initial={{ opacity: 0 }}
+                        whileInView={{ opacity: 1 }}
+                        viewport={{ once: true }}
+                        transition={{ delay: 0.2 }}
+                        className="text-gray-400 text-sm md:text-lg mb-8 max-w-2xl mx-auto font-light leading-relaxed"
+                    >
+                        Hệ sinh thái đa dạng từ giải trí, giáo dục đến thời trang phong cách sống dành cho <span className="text-white font-bold">Gen Z</span>.
+                    </motion.p>
+
+                    {/* CTA */}
+                    <motion.button 
+                        initial={{ opacity: 0, y: 20 }}
+                        whileInView={{ opacity: 1, y: 0 }}
+                        viewport={{ once: true }}
+                        transition={{ delay: 0.3 }}
+                        onClick={onBack}
+                        className="group relative px-8 py-3 bg-transparent overflow-hidden rounded-full border border-brand-cyan/50 text-white font-bold uppercase tracking-widest hover:border-brand-cyan transition-all"
+                    >
+                        <div className="absolute inset-0 w-0 bg-brand-cyan/20 transition-all duration-[250ms] ease-out group-hover:w-full"></div>
+                        <span className="relative flex items-center gap-2">
+                            Khám phá Hệ sinh thái <ArrowLeft className="rotate-180" size={18} />
+                        </span>
+                    </motion.button>
+                </div>
+            </div>
+          </section>
+      )}
+
+      {/* 5. LISTING GRID (Kết quả tìm kiếm hoặc Tin mới) */}
+      <section className="max-w-7xl mx-auto px-4 pb-20 mt-8">
+        <div className="flex items-center justify-between mb-6">
+            <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+                {isSearching ? `Kết quả tìm kiếm cho "${searchTerm}"` : "Tin đăng mới nhất"} 
+                {isLoading && <RefreshCw className="animate-spin text-green-600" size={16} />}
+            </h2>
+            {isSearching && (
+                <button onClick={clearSearch} className="text-sm text-blue-600 hover:underline">
+                    Xem tất cả tin
+                </button>
+            )}
         </div>
+        
+        {/* Empty State */}
+        {isSearching && searchResults.length === 0 && !isLoading && (
+            <div className="flex flex-col items-center justify-center py-16 bg-white rounded-xl border border-gray-200 shadow-sm">
+                <AlertCircle size={48} className="text-gray-300 mb-4" />
+                <h3 className="text-lg font-bold text-gray-700 mb-2">Không tìm thấy kết quả nào</h3>
+                <p className="text-gray-500 text-sm">Rất tiếc, chưa tìm thấy tin nào ở Thạnh Lợi cho từ khóa "{searchTerm}".</p>
+                <button 
+                    onClick={clearSearch} 
+                    className="mt-6 bg-gray-100 text-gray-700 px-6 py-2 rounded-full font-bold text-sm hover:bg-gray-200 transition-colors"
+                >
+                    Thử từ khóa khác
+                </button>
+            </div>
+        )}
 
-        {/* D. FEED SECTION */}
-        <div className="px-4 pb-8">
-             <div className="flex items-center justify-between mb-4">
-                <h3 className="font-bold text-gray-800 text-lg flex items-center gap-2">
-                   Tin mới đăng <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>
-                </h3>
-                <span className="text-xs text-green-600 font-bold cursor-pointer">Xem tất cả</span>
-             </div>
+        {/* Grid Display */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            {displayListings.map((item) => (
+                <motion.div 
+                    key={item.id} 
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.3 }}
+                    className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-lg transition-shadow duration-300 group flex flex-col h-full"
+                >
+                    
+                    {/* --- POLYMORPHIC CARD UI --- */}
+                    
+                    {/* TYPE: JOB (Giao diện Việc làm) */}
+                    {item.type === 'job' ? (
+                        <div className="p-5 flex flex-col h-full bg-gradient-to-b from-white to-gray-50">
+                            <div className="flex justify-between items-start mb-2">
+                                <span className="bg-green-100 text-green-700 text-[10px] font-bold px-2 py-1 rounded uppercase">Việc Làm</span>
+                            </div>
+                            <h3 className="font-bold text-gray-900 text-lg mb-1 leading-tight">{item.title}</h3>
+                            <p className="text-amber-500 font-black text-xl mb-4">{item.price}</p>
+                            
+                            <div className="mt-auto space-y-3">
+                                <div className="flex items-center gap-2 text-sm text-gray-600">
+                                    <div className="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center text-xs font-bold text-gray-500">
+                                        {item.seller.charAt(0)}
+                                    </div>
+                                    <span className="truncate">{item.seller}</span>
+                                </div>
+                                <div className="flex items-center gap-1 text-xs text-gray-400">
+                                    <MapPin size={12} /> {item.location}
+                                </div>
+                                <a 
+                                    href={`tel:${item.phone}`} 
+                                    className="w-full block bg-green-600 text-white text-center py-3 rounded-lg font-bold uppercase text-sm hover:bg-green-500 transition-colors shadow-green-100 shadow-lg"
+                                >
+                                    Gọi Xin Việc
+                                </a>
+                            </div>
+                        </div>
 
-             <div className="grid grid-cols-2 gap-4">
-                {feedItems.map((item) => (
-                   <motion.div 
-                      key={item.id}
-                      initial={{ opacity: 0, y: 10 }}
-                      whileInView={{ opacity: 1, y: 0 }}
-                      viewport={{ once: true }}
-                      className="bg-white rounded-xl overflow-hidden shadow-[0_2px_10px_rgba(0,0,0,0.05)] border border-gray-100 group cursor-pointer"
-                   >
-                      <div className="aspect-square relative overflow-hidden bg-gray-100">
-                         <img 
-                            src={item.image} 
-                            alt={item.title} 
-                            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" 
-                         />
-                         <span className="absolute top-2 right-2 bg-black/50 backdrop-blur text-white text-[10px] px-2 py-0.5 rounded">
-                            {item.tag}
-                         </span>
-                      </div>
-                      <div className="p-3">
-                         <h4 className="text-sm font-bold text-gray-800 line-clamp-2 leading-snug mb-2 min-h-[2.5em]">
-                            {item.title}
-                         </h4>
-                         <div className="flex items-center justify-between mb-2">
-                            <span className="text-red-500 font-bold text-sm">{item.price}</span>
+                    /* TYPE: SERVICE (Giao diện Dịch vụ) */
+                    ) : item.type === 'service' ? (
+                         <div className="p-5 flex flex-col h-full">
+                            <div className="flex items-center gap-4 mb-4">
+                                <div className="w-14 h-14 rounded-full bg-gray-100 border border-gray-200 overflow-hidden flex-shrink-0">
+                                    {item.image ? (
+                                        <img src={item.image} alt={item.title} className="w-full h-full object-cover" />
+                                    ) : (
+                                        <div className="w-full h-full flex items-center justify-center text-gray-400 font-bold text-xl uppercase">{item.title.charAt(0)}</div>
+                                    )}
+                                </div>
+                                <div>
+                                    <span className="bg-blue-100 text-blue-600 text-[10px] font-bold px-2 py-0.5 rounded uppercase">{item.seller}</span>
+                                    <h3 className="font-bold text-gray-900 text-base leading-tight mt-1 line-clamp-1">{item.title}</h3>
+                                </div>
+                            </div>
+                            
+                            <div className="mt-auto">
+                                <div className="flex items-center gap-1 text-xs text-gray-500 mb-4 bg-gray-50 p-2 rounded">
+                                    <MapPin size={12} className="text-red-500"/> {item.location}
+                                </div>
+                                <div className="grid grid-cols-2 gap-2">
+                                     <a href={`tel:${item.phone}`} className="bg-green-600 text-white py-2 rounded text-xs font-bold uppercase flex items-center justify-center gap-1 hover:bg-green-500 transition-colors">
+                                        <Phone size={14} /> Gọi Thợ
+                                     </a>
+                                     {item.linkProfile ? (
+                                        <a href={item.linkProfile} target="_blank" rel="noreferrer" className="bg-blue-600 text-white py-2 rounded text-xs font-bold uppercase flex items-center justify-center gap-1 hover:bg-blue-500 transition-colors">
+                                            <User size={14} /> Xem Hồ Sơ
+                                        </a>
+                                     ) : (
+                                        <a href={`https://zalo.me/${item.phone}`} target="_blank" rel="noreferrer" className="bg-blue-600 text-white py-2 rounded text-xs font-bold uppercase flex items-center justify-center gap-1 hover:bg-blue-500 transition-colors">
+                                            <MessageCircle size={14} /> Zalo
+                                        </a>
+                                     )}
+                                </div>
+                            </div>
                          </div>
-                         <div className="flex items-center gap-1 text-[10px] text-gray-400">
-                            <MapPin size={10} /> 
-                            <span className="truncate">{item.location}</span>
-                         </div>
-                         <div className="mt-2 text-[10px] text-gray-300 text-right">
-                            {item.time}
-                         </div>
-                      </div>
-                   </motion.div>
-                ))}
-             </div>
+
+                    /* TYPE: FOOD & DEFAULT (Giao diện Món ăn/Mặc định) */
+                    ) : (
+                        <>
+                            <div className="relative h-48 overflow-hidden bg-gray-100">
+                                {item.image && item.image.length > 5 ? (
+                                    <img 
+                                        src={item.image} 
+                                        alt={item.title} 
+                                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                                        onError={(e) => {
+                                            (e.target as HTMLImageElement).src = 'https://placehold.co/600x400?text=No+Image';
+                                        }}
+                                    />
+                                ) : (
+                                    <div className="w-full h-full flex items-center justify-center bg-gray-200 text-gray-400 font-bold uppercase text-2xl">
+                                        {item.title.charAt(0)}
+                                    </div>
+                                )}
+                                <span className="absolute top-2 left-2 bg-black/60 backdrop-blur-sm text-white text-[10px] font-bold px-2 py-1 rounded">
+                                    {item.category}
+                                </span>
+                            </div>
+                            <div className="p-4 flex flex-col flex-grow">
+                                <h3 className="font-bold text-gray-900 mb-2 line-clamp-2 min-h-[40px] text-sm md:text-base leading-tight">
+                                    {item.title}
+                                </h3>
+                                <p className={`font-extrabold text-lg mb-3 ${item.price === "Liên hệ" || item.price === "Thỏa thuận" ? 'text-blue-600' : 'text-red-600'}`}>
+                                    {item.price}
+                                </p>
+                                
+                                <div className="flex items-center gap-2 text-gray-500 text-xs mb-4">
+                                    <MapPin size={14} className="flex-shrink-0" /> <span className="truncate">{item.location}</span>
+                                </div>
+                                
+                                <div className="flex items-center justify-between pt-4 border-t border-gray-100 mt-auto">
+                                    <div className="flex items-center gap-2 max-w-[50%]">
+                                        <div className="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center text-xs font-bold text-gray-600 flex-shrink-0 uppercase">
+                                            {item.seller.charAt(0)}
+                                        </div>
+                                        <span className="text-xs font-semibold text-gray-700 truncate">{item.seller}</span>
+                                    </div>
+                                    
+                                    <div className="flex gap-2">
+                                        {item.phone ? (
+                                            <>
+                                                <a href={`tel:${item.phone}`} className="bg-green-600 hover:bg-green-700 text-white p-2 rounded-full transition-colors" title="Gọi ngay">
+                                                    <Phone size={16} />
+                                                </a>
+                                            </>
+                                        ) : (
+                                            <button className="bg-gray-300 text-gray-500 p-2 rounded-full cursor-not-allowed">
+                                                <Phone size={16} />
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                        </>
+                    )}
+                </motion.div>
+            ))}
         </div>
-      </div>
+        
+        {/* PAGINATION BUTTON (LOAD MORE) */}
+        {!isSearching && visibleCount < listings.length && (
+            <div className="text-center mt-12">
+                <button 
+                    onClick={handleLoadMore}
+                    className="group bg-white border border-gray-300 text-gray-600 px-8 py-3 rounded-full font-bold text-sm hover:bg-gray-50 hover:border-gray-400 hover:text-gray-900 transition-all flex items-center gap-2 mx-auto"
+                >
+                    Xem thêm tin đăng <ChevronDown size={16} className="group-hover:translate-y-1 transition-transform" />
+                </button>
+            </div>
+        )}
+      </section>
 
-      {/* 3. BOTTOM NAVIGATION BAR (Mobile First) */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 h-16 px-6 flex items-center justify-between z-50 shadow-[0_-4px_20px_rgba(0,0,0,0.05)] md:max-w-xl md:mx-auto md:rounded-t-2xl">
-         <button 
-            onClick={() => setActiveTab('home')}
-            className={`flex flex-col items-center gap-1 transition-colors ${activeTab === 'home' ? 'text-green-600' : 'text-gray-400 hover:text-gray-600'}`}
-         >
-            <Home size={24} fill={activeTab === 'home' ? "currentColor" : "none"} />
-            <span className="text-[10px] font-bold">Trang chủ</span>
-         </button>
-
-         <button 
-            onClick={() => setActiveTab('categories')}
-            className={`flex flex-col items-center gap-1 transition-colors ${activeTab === 'categories' ? 'text-green-600' : 'text-gray-400 hover:text-gray-600'}`}
-         >
-            <LayoutGrid size={24} fill={activeTab === 'categories' ? "currentColor" : "none"} />
-            <span className="text-[10px] font-bold">Danh mục</span>
-         </button>
-
-         <button 
-            onClick={() => setActiveTab('saved')}
-            className={`flex flex-col items-center gap-1 transition-colors ${activeTab === 'saved' ? 'text-green-600' : 'text-gray-400 hover:text-gray-600'}`}
-         >
-            <Heart size={24} fill={activeTab === 'saved' ? "currentColor" : "none"} />
-            <span className="text-[10px] font-bold">Đã lưu</span>
-         </button>
-
-         <button 
-            onClick={() => setActiveTab('account')}
-            className={`flex flex-col items-center gap-1 transition-colors ${activeTab === 'account' ? 'text-green-600' : 'text-gray-400 hover:text-gray-600'}`}
-         >
-            <User size={24} fill={activeTab === 'account' ? "currentColor" : "none"} />
-            <span className="text-[10px] font-bold">Tài khoản</span>
-         </button>
-      </div>
-
+      {/* Footer */}
+      <Footer />
     </div>
   );
 };
