@@ -10,18 +10,18 @@ import {
   Wrench,
   Truck,
   Scissors,
-  Wheat,
   PartyPopper,
   Grid,
   UserPlus,
   RefreshCw,
   AlertCircle,
   User,
-  Star,
   CheckCircle2,
   X,
   MessageCircle,
-  Globe
+  Globe,
+  Briefcase,
+  Cpu
 } from 'lucide-react';
 
 interface ServiceListingPageProps {
@@ -49,8 +49,9 @@ const serviceCategories = [
   { id: "SuaChua", name: "SỬA CHỮA", icon: <Wrench size={16} /> },
   { id: "VanChuyen", name: "VẬN CHUYỂN", icon: <Truck size={16} /> },
   { id: "LamDep", name: "LÀM ĐẸP & Y TẾ", icon: <Scissors size={16} /> },
-  { id: "NongNghiep", name: "NÔNG NGHIỆP", icon: <Wheat size={16} /> },
+  { id: "KinhDoanh", name: "KINH DOANH", icon: <Briefcase size={16} /> },
   { id: "TiecTung", name: "TIỆC TÙNG", icon: <PartyPopper size={16} /> },
+  { id: "CongNghe", name: "CÔNG NGHỆ", icon: <Cpu size={16} /> },
 ];
 
 const ServiceListingPage: React.FC<ServiceListingPageProps> = ({ onBack }) => {
@@ -153,8 +154,18 @@ const ServiceListingPage: React.FC<ServiceListingPageProps> = ({ onBack }) => {
   const filteredServices = services.filter(item => {
     // 1. Lọc theo Category
     const itemCat = item.category.trim().toLowerCase();
-    const activeCat = activeCategory.toLowerCase();
-    const matchesCategory = activeCategory === "all" || itemCat === activeCat;
+    
+    let matchesCategory = false;
+    if (activeCategory === "all") {
+        matchesCategory = true;
+    } else if (activeCategory === "KinhDoanh") {
+        matchesCategory = itemCat.includes("kinhdoanh") || itemCat.includes("muaban") || itemCat.includes("cuahang");
+    } else if (activeCategory === "CongNghe") {
+        matchesCategory = itemCat.includes("congnghe") || itemCat.includes("it") || itemCat.includes("ai") || itemCat.includes("camera");
+    } else {
+        // Logic cũ cho các mục khác (tương đối)
+        matchesCategory = itemCat.includes(activeCategory.toLowerCase());
+    }
 
     // 2. Lọc theo Tìm kiếm
     const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
@@ -164,7 +175,13 @@ const ServiceListingPage: React.FC<ServiceListingPageProps> = ({ onBack }) => {
   });
 
   const getCategoryDisplayName = (catCode: string) => {
-      const found = serviceCategories.find(c => c.id.toLowerCase() === catCode.toLowerCase());
+      const code = catCode.toLowerCase();
+      
+      // Mapping thông minh để hiển thị đẹp hơn
+      if (code.includes('kinhdoanh') || code.includes('muaban') || code.includes('cuahang')) return "KINH DOANH";
+      if (code.includes('congnghe') || code.includes('it') || code.includes('ai') || code.includes('camera')) return "CÔNG NGHỆ";
+
+      const found = serviceCategories.find(c => c.id.toLowerCase() === code);
       return found ? found.name : catCode;
   };
 
