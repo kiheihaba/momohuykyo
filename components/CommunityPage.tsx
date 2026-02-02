@@ -76,7 +76,7 @@ const CommunityPage: React.FC<CommunityPageProps> = ({ onBack }) => {
     const idxType = getIndex(['loai_tin', 'type']);
     const idxStatus = getIndex(['trang_thai', 'status']);
     const idxLoc = getIndex(['khu_vuc', 'dia_chi', 'location']);
-    const idxPhone = getIndex(['sdt', 'phone']);
+    const idxPhone = getIndex(['sdt', 'phone', 'sdt_lien_he']);
     const idxTime = getIndex(['thoi_gian', 'time', 'ngay_dang']);
 
     return rows.slice(1).filter(r => r.trim() !== '').map((row, index) => {
@@ -214,6 +214,9 @@ const CommunityPage: React.FC<CommunityPageProps> = ({ onBack }) => {
                 if (item.type === 'free') { badgeColor = "bg-green-600"; badgeText = "FREE - TẶNG"; }
                 if (isResolved) { badgeColor = "bg-gray-600"; badgeText = item.type === 'sos' ? "ĐÃ TÌM THẤY" : "ĐÃ TẶNG"; }
 
+                // Phone Sanitization Logic
+                const sanitizedPhone = item.phone ? item.phone.replace(/\D/g, '') : '';
+
                 return (
                     <motion.div
                         key={item.id}
@@ -271,16 +274,24 @@ const CommunityPage: React.FC<CommunityPageProps> = ({ onBack }) => {
 
                             {/* ACTIONS FOOTER */}
                             <div className="grid grid-cols-4 gap-2 pt-2 border-t border-gray-800">
-                                <button
-                                    onClick={(e) => { e.stopPropagation(); window.location.href = `tel:${item.phone}`; }}
-                                    className={`col-span-3 py-2.5 rounded-lg text-xs font-bold uppercase flex items-center justify-center gap-2 transition-all ${
-                                        isResolved 
-                                        ? "bg-gray-700 text-gray-500 cursor-not-allowed" 
-                                        : "bg-white text-black hover:bg-gray-200"
-                                    }`}
-                                >
-                                    <Phone size={14} fill="currentColor" /> Liên hệ ngay
-                                </button>
+                                {item.phone && sanitizedPhone ? (
+                                    <a
+                                        href={`tel:${sanitizedPhone}`}
+                                        onClick={(e) => e.stopPropagation()}
+                                        className={`col-span-3 py-2.5 rounded-lg text-xs font-bold uppercase flex items-center justify-center gap-2 transition-all ${
+                                            isResolved 
+                                            ? "bg-gray-700 text-gray-500 cursor-not-allowed pointer-events-none" 
+                                            : "bg-white text-black hover:bg-gray-200"
+                                        }`}
+                                    >
+                                        <Phone size={14} fill="currentColor" /> Liên hệ ngay
+                                    </a>
+                                ) : (
+                                    <span className="col-span-3 py-2.5 rounded-lg text-xs font-bold uppercase flex items-center justify-center gap-2 bg-gray-800 text-gray-500 cursor-not-allowed">
+                                        Chưa có SĐT
+                                    </span>
+                                )}
+                                
                                 <button 
                                     onClick={(e) => handleShare(item, e)}
                                     className="col-span-1 bg-gray-800 hover:bg-gray-700 text-white rounded-lg flex items-center justify-center transition-colors"
@@ -407,16 +418,26 @@ const CommunityPage: React.FC<CommunityPageProps> = ({ onBack }) => {
 
                     {/* Sticky Footer Actions */}
                     <div className="p-4 bg-[#121212] border-t border-gray-800 grid grid-cols-2 gap-3 shrink-0">
-                        <a 
-                            href={`tel:${selectedItem.phone}`}
-                            className={`flex items-center justify-center gap-2 py-3.5 rounded-xl text-sm font-bold uppercase transition-all shadow-lg active:scale-95 ${
-                                selectedItem.status === 'resolved' 
-                                ? "bg-gray-700 text-gray-500 cursor-not-allowed" 
-                                : "bg-gradient-to-r from-green-600 to-emerald-600 text-white hover:shadow-green-900/30"
-                            }`}
-                        >
-                             <Phone size={18} fill="currentColor" /> Liên hệ ngay
-                        </a>
+                        {selectedItem.phone ? (
+                            <a 
+                                href={`tel:${selectedItem.phone.replace(/\D/g, '')}`}
+                                className={`flex items-center justify-center gap-2 py-3.5 rounded-xl text-sm font-bold uppercase transition-all shadow-lg active:scale-95 ${
+                                    selectedItem.status === 'resolved' 
+                                    ? "bg-gray-700 text-gray-500 cursor-not-allowed pointer-events-none" 
+                                    : "bg-gradient-to-r from-green-600 to-emerald-600 text-white hover:shadow-green-900/30"
+                                }`}
+                            >
+                                 <Phone size={18} fill="currentColor" /> Liên hệ ngay
+                            </a>
+                        ) : (
+                            <button
+                                disabled
+                                className="flex items-center justify-center gap-2 py-3.5 rounded-xl text-sm font-bold uppercase bg-gray-700 text-gray-500 cursor-not-allowed"
+                            >
+                                <Phone size={18} /> Chưa có SĐT
+                            </button>
+                        )}
+                        
                         <button 
                             onClick={handleZaloShare}
                             className="flex items-center justify-center gap-2 bg-blue-600 text-white py-3.5 rounded-xl text-sm font-bold uppercase hover:bg-blue-500 transition-all shadow-lg active:scale-95"
