@@ -21,6 +21,7 @@ import FashionPage from './components/FashionPage';
 import VehiclePage from './components/VehiclePage';
 import GeneralMarketPage from './components/GeneralMarketPage';
 import CommunityPage from './components/CommunityPage';
+import StudioPage from './components/StudioPage';
 
 const App: React.FC = () => {
   const [showMerch, setShowMerch] = useState(false);
@@ -37,6 +38,7 @@ const App: React.FC = () => {
   const [showVehiclePage, setShowVehiclePage] = useState(false);
   const [showGeneralMarketPage, setShowGeneralMarketPage] = useState(false);
   const [showCommunityPage, setShowCommunityPage] = useState(false);
+  const [showStudioPage, setShowStudioPage] = useState(false);
 
   // Helper function to turn off all views
   const resetAllViews = () => {
@@ -54,6 +56,7 @@ const App: React.FC = () => {
     setShowVehiclePage(false);
     setShowGeneralMarketPage(false);
     setShowCommunityPage(false);
+    setShowStudioPage(false);
   };
 
   // Sync state with URL Hash
@@ -84,6 +87,7 @@ const App: React.FC = () => {
       case '#thanhloiquetoi-vehicles': setShowVehiclePage(true); break;
       case '#thanhloiquetoi-general': setShowGeneralMarketPage(true); break;
       case '#thanhloiquetoi-community': setShowCommunityPage(true); break;
+      case '#thanhloiquetoi-studio': setShowStudioPage(true); break;
       default: break;
     }
   };
@@ -116,6 +120,7 @@ const App: React.FC = () => {
   const handleOpenVehiclePage = () => window.location.hash = 'thanhloiquetoi-vehicles';
   const handleOpenGeneralMarketPage = () => window.location.hash = 'thanhloiquetoi-general';
   const handleOpenCommunityPage = () => window.location.hash = 'thanhloiquetoi-community';
+  const handleOpenStudioPage = () => window.location.hash = 'thanhloiquetoi-studio';
 
   // Back Handlers
   const handleBackToHome = () => {
@@ -139,6 +144,7 @@ const App: React.FC = () => {
   if (showVehiclePage) return <VehiclePage onBack={handleBackToMarket} />;
   if (showGeneralMarketPage) return <GeneralMarketPage onBack={handleBackToMarket} />;
   if (showCommunityPage) return <CommunityPage onBack={handleBackToMarket} />;
+  if (showStudioPage) return <StudioPage onBack={handleBackToMarket} />;
 
   if (showMarket) {
     return <ThanhLoiMarketPage 
@@ -151,6 +157,7 @@ const App: React.FC = () => {
         onOpenVehicles={handleOpenVehiclePage}
         onOpenGeneralMarket={handleOpenGeneralMarketPage}
         onOpenCommunity={handleOpenCommunityPage}
+        onOpenStudio={handleOpenStudioPage}
     />;
   }
 

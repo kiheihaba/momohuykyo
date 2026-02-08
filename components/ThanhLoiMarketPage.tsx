@@ -23,7 +23,8 @@ import {
   User,
   ChevronDown,
   ShoppingBag,
-  HeartHandshake
+  HeartHandshake,
+  Clapperboard
 } from 'lucide-react';
 import Footer from './Footer';
 
@@ -37,6 +38,7 @@ interface ThanhLoiMarketPageProps {
   onOpenVehicles?: () => void;
   onOpenGeneralMarket?: () => void;
   onOpenCommunity?: () => void;
+  onOpenStudio?: () => void; // New Prop
 }
 
 // Interface chuẩn cho Listing hiển thị ở trang chủ
@@ -79,6 +81,7 @@ const categories = [
   { id: 6, name: "Xe Cộ", icon: <Car size={24} />, color: "bg-red-100 text-red-600" },
   { id: 7, name: "Bất động sản", icon: <Home size={24} />, color: "bg-purple-100 text-purple-600" },
   { id: 8, name: "Góc Cộng Đồng", icon: <HeartHandshake size={24} />, color: "bg-indigo-100 text-indigo-600", subtitle: "(SOS/Tặng đồ)" },
+  { id: 9, name: "Thạnh Lợi Studio", icon: <Clapperboard size={24} />, color: "bg-gray-900 text-brand-cyan", subtitle: "NEW" },
 ];
 
 const ThanhLoiMarketPage: React.FC<ThanhLoiMarketPageProps> = ({ 
@@ -90,7 +93,8 @@ const ThanhLoiMarketPage: React.FC<ThanhLoiMarketPageProps> = ({
   onOpenFashion,
   onOpenVehicles,
   onOpenGeneralMarket,
-  onOpenCommunity
+  onOpenCommunity,
+  onOpenStudio
 }) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [listings, setListings] = useState<MarketListing[]>([]);
@@ -320,6 +324,8 @@ const ThanhLoiMarketPage: React.FC<ThanhLoiMarketPageProps> = ({
         onOpenGeneralMarket();
     } else if (catName === "Góc Cộng Đồng" && onOpenCommunity) {
         onOpenCommunity();
+    } else if (catName === "Thạnh Lợi Studio" && onOpenStudio) {
+        onOpenStudio();
     }
   };
 
@@ -453,7 +459,7 @@ const ThanhLoiMarketPage: React.FC<ThanhLoiMarketPageProps> = ({
                 </h2>
             </div>
             
-            <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-8 gap-4">
+            <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-9 gap-4">
                 {categories.map((cat) => (
                     <motion.div 
                         key={cat.id}
@@ -467,7 +473,7 @@ const ThanhLoiMarketPage: React.FC<ThanhLoiMarketPageProps> = ({
                         <div>
                             <span className="text-sm font-semibold text-gray-700 block leading-tight">{cat.name}</span>
                             {(cat as any).subtitle && (
-                                <span className="text-[9px] font-bold text-red-500 mt-1 block tracking-tight">{(cat as any).subtitle}</span>
+                                <span className={`text-[9px] font-bold mt-1 block tracking-tight ${cat.id === 9 ? 'text-brand-cyan' : 'text-red-500'}`}>{(cat as any).subtitle}</span>
                             )}
                         </div>
                     </motion.div>
