@@ -13,7 +13,8 @@ import {
   Heart,
   RefreshCw,
   AlertCircle,
-  Disc
+  Clapperboard,
+  Plane
 } from 'lucide-react';
 
 interface StudioPageProps {
@@ -23,32 +24,43 @@ interface StudioPageProps {
 // Cấu trúc dữ liệu khớp với Google Sheet
 interface MediaItem {
   id: string;
-  title: string;       // Title
-  type: 'Video' | 'Music'; // Type
-  artist: string;      // Artist
-  url: string;         // SourceURL
-  thumbnail: string;   // Thumbnail
-  status: string;      // Status
+  title: string;       // tieu_de
+  author: string;      // tac_gia
+  url: string;         // link_youtube
+  thumbnail: string;   // hinh_anh
+  category: string;    // loai (Am Nhac, Phim, Flycam)
+  isFeatured: boolean; // noi_bat (Yes/No)
 }
 
 // 1. CẤU HÌNH LINK GOOGLE SHEET
-const SHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQKsrBM98OxA9UvLGqbadgJx0_uzCvOaGHDCE7FsEk3fsVzUP-u3FlS7fsQ5rN28914KcKvHVTlQcJN/pub?gid=0&single=true&output=csv';
+const SHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRJrotBdzd-po6z_Zd6fbew0pqGgdDdZjRMf7vutpfJia2aFpNyTZNdvGZxN4MfcGtRwJWUrmICvZMF/pub?gid=2048029384&single=true&output=csv';
+
+const filters = [
+    { id: 'all', label: 'Tất cả', icon: <Film size={16} /> },
+    { id: 'music', label: 'Âm Nhạc', icon: <Music size={16} /> },
+    { id: 'movie', label: 'Phim & Vlog', icon: <Clapperboard size={16} /> },
+    { id: 'flycam', label: 'Flycam Quê Hương', icon: <Plane size={16} /> }
+];
 
 const StudioPage: React.FC<StudioPageProps> = ({ onBack }) => {
-  const [activeTab, setActiveTab] = useState<'All' | 'Video' | 'Music'>('All');
+  const [activeFilter, setActiveFilter] = useState('all');
   const [mediaItems, setMediaItems] = useState<MediaItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [playingItem, setPlayingItem] = useState<MediaItem | null>(null);
+  
+  // Hero Item (Bài nổi bật)
+  const [heroItem, setHeroItem] = useState<MediaItem | null>(null);
 
-  // --- HELPER: Get YouTube ID ---
+  // --- HELPER: Get YouTube ID (Robust) ---
   const getYouTubeId = (url: string) => {
+    if (!url) return null;
     const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
     const match = url.match(regExp);
     return (match && match[2].length === 11) ? match[2] : null;
   };
 
-  // --- HELPER: Parse CSV (Robust) ---
+  // --- HELPER: Parse CSV ---
   const parseCSV = (text: string): MediaItem[] => {
     const rows = text.split('\n');
     
@@ -66,40 +78,36 @@ const StudioPage: React.FC<StudioPageProps> = ({ onBack }) => {
 
     const headers = parseLine(rows[0]);
     // Tìm index cột không phân biệt hoa thường
-    const getIndex = (keys: string[]) => headers.findIndex(h => keys.includes(h.trim()));
+    const getIndex = (keys: string[]) => headers.findIndex(h => keys.includes(h.toLowerCase().trim()));
 
-    const idxID = getIndex(['ID', 'id']);
-    const idxTitle = getIndex(['Title', 'title', 'Tên bài hát']);
-    const idxType = getIndex(['Type', 'type', 'Loại']);
-    const idxArtist = getIndex(['Artist', 'artist', 'Nghệ sĩ']);
-    const idxURL = getIndex(['SourceURL', 'url', 'Link']);
-    const idxThumb = getIndex(['Thumbnail', 'img', 'Ảnh bìa']);
-    const idxStatus = getIndex(['Status', 'status', 'Trạng thái']);
+    const idxTitle = getIndex(['tieu_de', 'title', 'ten_bai']);
+    const idxAuthor = getIndex(['tac_gia', 'author', 'ca_si']);
+    const idxLink = getIndex(['link_youtube', 'url', 'link']);
+    const idxThumb = getIndex(['hinh_anh', 'thumbnail', 'anh_bia']);
+    const idxCat = getIndex(['loai', 'category', 'phan_loai']);
+    const idxFeatured = getIndex(['noi_bat', 'featured', 'hot']);
 
     return rows.slice(1)
         .filter(r => r.trim() !== '')
-        .map((row) => {
+        .map((row, index) => {
             const cols = parseLine(row);
             const getCol = (i: number) => (i !== -1 && cols[i]) ? cols[i].trim() : "";
 
-            const status = getCol(idxStatus);
-            // Logic lọc: Chỉ lấy dòng có Status là "Publish"
-            if (status.toLowerCase() !== 'publish') return null;
-
-            const typeRaw = getCol(idxType);
-            const type = (typeRaw.toLowerCase().includes('video')) ? 'Video' : 'Music';
+            // Lấy ID từ link Youtube để làm Thumbnail mặc định nếu không có ảnh
+            const ytLink = getCol(idxLink);
+            const ytId = getYouTubeId(ytLink);
+            const defaultThumb = ytId ? `https://img.youtube.com/vi/${ytId}/maxresdefault.jpg` : "https://placehold.co/600x400/1a1a1a/FFF?text=No+Image";
 
             return {
-                id: getCol(idxID) || Math.random().toString(36).substr(2, 9),
+                id: `media-${index}`,
                 title: getCol(idxTitle) || "Chưa đặt tên",
-                type: type,
-                artist: getCol(idxArtist) || "Momo x HuyKyo",
-                url: getCol(idxURL),
-                thumbnail: getCol(idxThumb) || "https://placehold.co/600x400/1a1a1a/FFF?text=No+Image",
-                status: status
+                author: getCol(idxAuthor) || "Thạnh Lợi Studio",
+                url: ytLink,
+                thumbnail: getCol(idxThumb) || defaultThumb,
+                category: getCol(idxCat) || "Khac",
+                isFeatured: getCol(idxFeatured).toLowerCase() === 'yes'
             };
-        })
-        .filter((item): item is MediaItem => item !== null); // Loại bỏ các dòng null
+        });
   };
 
   // --- FETCH DATA ---
@@ -111,7 +119,13 @@ const StudioPage: React.FC<StudioPageProps> = ({ onBack }) => {
         if (!response.ok) throw new Error("Failed to fetch data");
         const text = await response.text();
         const data = parseCSV(text);
-        setMediaItems(data.reverse()); // Mới nhất lên đầu
+        
+        // Tách bài nổi bật (Lấy bài đầu tiên có noi_bat = Yes)
+        const featured = data.find(item => item.isFeatured);
+        setHeroItem(featured || null);
+
+        // Danh sách còn lại (Có thể bao gồm cả bài featured hoặc loại bỏ tùy ý, ở đây tôi giữ lại để list đầy đủ)
+        setMediaItems(data.reverse()); 
       } catch (err) {
         console.error("Error fetching studio data:", err);
         setError("Không thể tải dữ liệu Studio. Vui lòng thử lại sau.");
@@ -124,263 +138,234 @@ const StudioPage: React.FC<StudioPageProps> = ({ onBack }) => {
   }, []);
 
   // Filter Logic
-  const filteredMedia = activeTab === 'All' 
-    ? mediaItems 
-    : mediaItems.filter(item => item.type === activeTab);
+  const filteredMedia = mediaItems.filter(item => {
+      if (activeFilter === 'all') return true;
+      const catLower = item.category.toLowerCase();
+      if (activeFilter === 'music') return catLower.includes('nhạc') || catLower.includes('music') || catLower.includes('hát');
+      if (activeFilter === 'movie') return catLower.includes('phim') || catLower.includes('vlog') || catLower.includes('ký sự');
+      if (activeFilter === 'flycam') return catLower.includes('flycam') || catLower.includes('cảnh');
+      return true;
+  });
 
   return (
-    <div className="fixed inset-0 z-[60] bg-[#0f0f0f] overflow-y-auto overflow-x-hidden custom-scrollbar font-sans text-white">
+    <div className="fixed inset-0 z-[60] bg-[#050505] overflow-y-auto overflow-x-hidden custom-scrollbar font-sans text-white">
       
-      {/* 1. HEADER */}
-      <div className="sticky top-0 z-50 bg-[#0f0f0f]/90 backdrop-blur-xl border-b border-gray-800 px-4 h-16 flex items-center justify-between shadow-2xl">
+      {/* 1. HEADER (Transparent Fixed) */}
+      <div className="sticky top-0 z-50 bg-gradient-to-b from-black/90 to-transparent px-4 h-20 flex items-center justify-between transition-all duration-300 pointer-events-none">
         <button 
           onClick={onBack}
-          className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors"
+          className="pointer-events-auto flex items-center gap-2 text-gray-300 hover:text-brand-cyan transition-colors bg-black/50 backdrop-blur-md px-4 py-2 rounded-full border border-white/10"
         >
-          <ArrowLeft size={24} />
+          <ArrowLeft size={20} /> <span className="text-sm font-bold uppercase hidden md:inline">Quay lại</span>
         </button>
-        <div className="flex flex-col items-center">
-            <h1 className="font-black text-lg leading-none tracking-widest uppercase text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-600">
-                Thạnh Lợi Studio
+        
+        <div className="pointer-events-auto flex items-center gap-2 bg-black/50 backdrop-blur-md px-4 py-2 rounded-full border border-white/10">
+            <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>
+            <h1 className="font-black text-sm tracking-widest uppercase text-white">
+                Thạnh Lợi <span className="text-brand-cyan">Studio</span>
             </h1>
-            <span className="text-[10px] text-gray-500 font-bold uppercase tracking-[0.3em]">Entertainment</span>
         </div>
-        <div className="w-8"></div>
       </div>
 
-      {/* 2. HERO / FEATURED */}
-      <section className="relative h-[40vh] md:h-[50vh] w-full overflow-hidden">
-          <div className="absolute inset-0">
-              <img 
-                src="https://images.unsplash.com/photo-1514320291840-2e0a9bf2a9ae?auto=format&fit=crop&q=80&w=1600" 
-                alt="Studio Banner" 
-                className="w-full h-full object-cover opacity-60"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-[#0f0f0f] via-[#0f0f0f]/50 to-transparent"></div>
-          </div>
-          <div className="absolute bottom-0 left-0 w-full p-8 text-center">
-              <motion.div
-                initial={{ y: 20, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                transition={{ duration: 0.8 }}
-              >
-                  <h2 className="text-3xl md:text-5xl font-black uppercase mb-4 tracking-tighter">
-                      Âm Vang <span className="text-purple-500">Đất Mẹ</span>
-                  </h2>
-                  <p className="text-gray-300 max-w-xl mx-auto text-sm md:text-base font-light">
-                      Thư viện lưu trữ những thước phim và giai điệu mang đậm bản sắc văn hóa và con người Thạnh Lợi.
-                  </p>
-              </motion.div>
-          </div>
-      </section>
+      {/* 2. HERO BANNER (Cinematic Featured) */}
+      {!isLoading && heroItem && (
+          <section className="relative h-[60vh] md:h-[80vh] w-full overflow-hidden group">
+              {/* Background Image */}
+              <div className="absolute inset-0">
+                  <img 
+                    src={heroItem.thumbnail} 
+                    alt={heroItem.title} 
+                    className="w-full h-full object-cover opacity-80 transition-transform duration-[10s] ease-out group-hover:scale-105"
+                  />
+                  {/* Cinematic Gradient Overlay */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-[#050505] via-[#050505]/40 to-transparent"></div>
+                  <div className="absolute inset-0 bg-gradient-to-r from-[#050505]/80 via-transparent to-transparent"></div>
+              </div>
 
-      {/* 3. FILTER BAR */}
-      <div className="sticky top-16 z-40 bg-[#0f0f0f]/95 backdrop-blur-md border-b border-gray-800 py-4 shadow-lg">
-          <div className="flex justify-center gap-4">
-              {[
-                  { id: 'All', label: 'Tất cả', icon: <Film size={16} /> },
-                  { id: 'Video', label: 'Video', icon: <Video size={16} /> },
-                  { id: 'Music', label: 'Âm nhạc', icon: <Headphones size={16} /> }
-              ].map((tab) => (
-                  <button
-                      key={tab.id}
-                      onClick={() => setActiveTab(tab.id as any)}
-                      className={`flex items-center gap-2 px-6 py-2 rounded-full text-xs font-bold uppercase tracking-wider transition-all duration-300 ${
-                          activeTab === tab.id 
-                          ? "bg-purple-600 text-white shadow-[0_0_15px_rgba(147,51,234,0.5)] scale-105" 
-                          : "bg-[#1a1a1a] text-gray-500 hover:text-white border border-gray-800"
-                      }`}
+              {/* Content */}
+              <div className="absolute bottom-0 left-0 w-full p-6 md:p-12 pb-16 flex flex-col items-start justify-end h-full z-10">
+                  <motion.div
+                    initial={{ y: 30, opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    transition={{ duration: 0.8 }}
+                    className="max-w-4xl"
                   >
-                      {tab.icon} {tab.label}
-                  </button>
-              ))}
-          </div>
-      </div>
+                      <div className="inline-flex items-center gap-2 bg-brand-cyan text-black text-[10px] font-black px-3 py-1 rounded-sm uppercase tracking-widest mb-4 shadow-[0_0_15px_rgba(0,255,255,0.6)]">
+                          <Clapperboard size={12} /> Tiêu điểm
+                      </div>
+                      <h2 className="text-4xl md:text-6xl lg:text-7xl font-black uppercase mb-4 tracking-tighter leading-[0.9] text-transparent bg-clip-text bg-gradient-to-b from-white to-gray-400 drop-shadow-lg">
+                          {heroItem.title}
+                      </h2>
+                      <p className="text-gray-300 text-lg md:text-xl font-medium mb-8 flex items-center gap-2">
+                          <span className="text-brand-cyan">{heroItem.author}</span> • {heroItem.category}
+                      </p>
+                      
+                      <button 
+                        onClick={() => setPlayingItem(heroItem)}
+                        className="group flex items-center gap-3 bg-white text-black px-8 py-4 rounded-full font-bold uppercase tracking-wider hover:bg-brand-cyan transition-all shadow-[0_0_20px_rgba(255,255,255,0.3)] hover:shadow-[0_0_30px_rgba(0,255,255,0.6)]"
+                      >
+                          <Play size={24} fill="black" /> Xem Ngay
+                      </button>
+                  </motion.div>
+              </div>
+          </section>
+      )}
 
-      {/* 4. MEDIA GRID */}
-      <div className="max-w-7xl mx-auto px-4 py-12 pb-32">
+      {/* 3. MAIN CONTENT AREA */}
+      <div className="max-w-[1600px] mx-auto px-4 md:px-8 py-8 relative z-20 -mt-10 md:-mt-20">
+          
+          {/* Filter Bar (Glassmorphism) */}
+          <div className="flex justify-start md:justify-center overflow-x-auto scrollbar-hide mb-12">
+              <div className="bg-black/60 backdrop-blur-xl border border-white/10 p-2 rounded-2xl flex gap-2">
+                  {filters.map((tab) => (
+                      <button
+                          key={tab.id}
+                          onClick={() => setActiveFilter(tab.id)}
+                          className={`flex items-center gap-2 px-5 py-3 rounded-xl text-xs font-bold uppercase tracking-wider transition-all duration-300 whitespace-nowrap ${
+                              activeFilter === tab.id 
+                              ? "bg-brand-cyan text-black shadow-[0_0_15px_rgba(0,255,255,0.4)]" 
+                              : "text-gray-400 hover:text-white hover:bg-white/10"
+                          }`}
+                      >
+                          {tab.icon} {tab.label}
+                      </button>
+                  ))}
+              </div>
+          </div>
+
+          {/* Loading & Error */}
           {isLoading && (
-              <div className="flex flex-col items-center justify-center py-20 text-gray-500">
-                  <RefreshCw className="animate-spin mb-4 text-purple-500" size={32} />
-                  <p>Đang tải dữ liệu media...</p>
+              <div className="flex flex-col items-center justify-center py-32 text-gray-500">
+                  <RefreshCw className="animate-spin mb-4 text-brand-cyan" size={32} />
+                  <p>Đang tải dữ liệu phim...</p>
               </div>
           )}
 
           {error && (
-              <div className="flex flex-col items-center justify-center py-20 text-red-500">
+              <div className="flex flex-col items-center justify-center py-32 text-red-500">
                   <AlertCircle size={32} className="mb-4" />
                   <p>{error}</p>
               </div>
           )}
 
-          {!isLoading && !error && filteredMedia.length === 0 && (
-              <div className="text-center py-20 text-gray-600">
-                  <Film size={48} className="mx-auto mb-4 opacity-20" />
-                  <p>Chưa có nội dung nào trong danh mục này.</p>
-              </div>
+          {/* MEDIA GRID */}
+          {!isLoading && !error && (
+              <>
+                <h3 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
+                    <Film className="text-brand-cyan" /> Danh sách phát
+                </h3>
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
+                    {filteredMedia.map((item, index) => (
+                        <motion.div
+                            key={item.id}
+                            layout
+                            initial={{ opacity: 0, scale: 0.9 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            transition={{ duration: 0.3, delay: index * 0.05 }}
+                            onClick={() => setPlayingItem(item)}
+                            className="group cursor-pointer relative"
+                        >
+                            {/* Thumbnail Container */}
+                            <div className="relative aspect-video rounded-xl overflow-hidden bg-[#1a1a1a] border border-white/5 group-hover:border-brand-cyan/50 transition-all duration-500 shadow-lg">
+                                <img 
+                                    src={item.thumbnail} 
+                                    alt={item.title} 
+                                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110 opacity-90 group-hover:opacity-100"
+                                />
+                                
+                                {/* Overlay & Play Icon */}
+                                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
+                                    <div className="w-14 h-14 rounded-full bg-brand-cyan/90 backdrop-blur-md flex items-center justify-center shadow-[0_0_20px_rgba(0,255,255,0.6)] scale-0 group-hover:scale-100 transition-transform duration-300">
+                                        <Play size={24} fill="black" className="text-black ml-1" />
+                                    </div>
+                                </div>
+
+                                {/* Category Badge */}
+                                <div className="absolute top-2 left-2 bg-black/80 backdrop-blur-sm px-2 py-1 rounded text-[9px] font-bold uppercase tracking-wider text-gray-300 border border-white/10">
+                                    {item.category}
+                                </div>
+                            </div>
+
+                            {/* Info */}
+                            <div className="mt-3">
+                                <h3 className="font-bold text-white text-sm md:text-base line-clamp-1 group-hover:text-brand-cyan transition-colors">
+                                    {item.title}
+                                </h3>
+                                <p className="text-gray-500 text-xs mt-1">{item.author}</p>
+                            </div>
+                        </motion.div>
+                    ))}
+                </div>
+              </>
           )}
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-              {!isLoading && !error && filteredMedia.map((item, index) => (
-                  <motion.div
-                      key={item.id}
-                      layout
-                      initial={{ opacity: 0, scale: 0.9 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      transition={{ duration: 0.3, delay: index * 0.05 }}
-                      onClick={() => setPlayingItem(item)}
-                      className="group cursor-pointer"
-                  >
-                      {/* Card Thumbnail */}
-                      <div className="relative aspect-video rounded-xl overflow-hidden bg-[#1a1a1a] border border-gray-800 group-hover:border-purple-500/50 transition-all duration-500">
-                          <img 
-                              src={item.thumbnail} 
-                              alt={item.title} 
-                              className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110 opacity-80 group-hover:opacity-100"
-                              onError={(e) => {
-                                (e.target as HTMLImageElement).src = 'https://placehold.co/600x400/1a1a1a/FFF?text=Media';
-                              }}
-                          />
-                          
-                          {/* Play Overlay */}
-                          <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                              <div className="w-12 h-12 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center border border-white/20 scale-0 group-hover:scale-100 transition-transform duration-300 delay-100">
-                                  <Play size={20} fill="white" className="text-white ml-1" />
-                              </div>
-                          </div>
-
-                          {/* Badges */}
-                          <div className="absolute top-2 right-2 bg-black/60 backdrop-blur-sm px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider flex items-center gap-1">
-                              {item.type === 'Video' ? <Video size={10} className="text-blue-400" /> : <Music size={10} className="text-pink-400" />}
-                              {item.type}
-                          </div>
-                      </div>
-
-                      {/* Card Info */}
-                      <div className="mt-3 px-1">
-                          <h3 className="font-bold text-white text-base line-clamp-1 group-hover:text-purple-400 transition-colors">
-                              {item.title}
-                          </h3>
-                          <div className="flex justify-between items-center mt-1 text-xs text-gray-500">
-                              <span>{item.artist}</span>
-                              <span className="flex items-center gap-1 group-hover:text-white transition-colors">Phát ngay <Play size={10} /></span>
-                          </div>
-                      </div>
-                  </motion.div>
-              ))}
-          </div>
       </div>
 
-      {/* 5. CUSTOM MEDIA PLAYER MODAL */}
+      {/* 4. SMART PLAYER MODAL (Lightbox) */}
       <AnimatePresence>
         {playingItem && (
             <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                className="fixed inset-0 z-[70] bg-black/95 backdrop-blur-xl flex flex-col items-center justify-center p-4 md:p-8"
+                className="fixed inset-0 z-[100] bg-black/95 backdrop-blur-xl flex flex-col items-center justify-center p-4"
                 onClick={() => setPlayingItem(null)}
             >
                 {/* Close Button */}
                 <button 
                     onClick={() => setPlayingItem(null)}
-                    className="absolute top-6 right-6 p-2 bg-white/10 hover:bg-white/20 rounded-full text-white transition-colors z-50"
+                    className="absolute top-6 right-6 p-3 bg-white/10 hover:bg-white/20 rounded-full text-white transition-colors z-50 group"
                 >
-                    <X size={24} />
+                    <X size={24} className="group-hover:rotate-90 transition-transform duration-300" />
                 </button>
 
                 <motion.div 
-                    initial={{ scale: 0.9, y: 50 }}
+                    initial={{ scale: 0.9, y: 20 }}
                     animate={{ scale: 1, y: 0 }}
-                    exit={{ scale: 0.9, y: 50 }}
-                    className="w-full max-w-5xl bg-[#121212] rounded-3xl overflow-hidden border border-gray-800 shadow-[0_0_50px_rgba(147,51,234,0.1)] relative"
+                    exit={{ scale: 0.9, y: 20 }}
+                    className="w-full max-w-6xl aspect-video bg-black rounded-2xl overflow-hidden shadow-[0_0_50px_rgba(0,255,255,0.1)] border border-white/10 relative"
                     onClick={(e) => e.stopPropagation()}
                 >
-                    {/* PLAYER CONTENT */}
-                    <div className="aspect-video w-full bg-black relative flex items-center justify-center overflow-hidden">
-                        {playingItem.type === 'Video' ? (
-                            getYouTubeId(playingItem.url) ? (
-                                <iframe 
-                                    width="100%" 
-                                    height="100%" 
-                                    src={`https://www.youtube.com/embed/${getYouTubeId(playingItem.url)}?autoplay=1&rel=0`}
-                                    title={playingItem.title} 
-                                    frameBorder="0" 
-                                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
-                                    allowFullScreen
-                                    className="absolute inset-0"
-                                ></iframe>
-                            ) : (
-                                <div className="text-center p-4">
-                                    <p className="text-red-500 mb-2">Video Source Error</p>
-                                    <a href={playingItem.url} target="_blank" rel="noreferrer" className="text-blue-400 hover:underline">
-                                        Mở trực tiếp link gốc
-                                    </a>
-                                </div>
-                            )
-                        ) : (
-                            // AUDIO PLAYER INTERFACE
-                            <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-gray-900 to-black relative">
-                                {/* Background Blur */}
-                                <img 
-                                    src={playingItem.thumbnail} 
-                                    alt="Blur BG" 
-                                    className="absolute inset-0 w-full h-full object-cover opacity-20 blur-2xl"
-                                />
-                                
-                                {/* Rotating Disc Animation */}
-                                <div className="w-48 h-48 md:w-64 md:h-64 rounded-full border-4 border-gray-800 shadow-2xl flex items-center justify-center relative z-10 animate-[spin_10s_linear_infinite]">
-                                    <div className="absolute inset-0 rounded-full border border-white/10"></div>
-                                    <div className="w-full h-full rounded-full overflow-hidden">
-                                        <img 
-                                            src={playingItem.thumbnail} 
-                                            alt="Album Art" 
-                                            className="w-full h-full object-cover"
-                                            onError={(e) => { (e.target as HTMLImageElement).src = 'https://placehold.co/400x400/333/FFF?text=Music'; }}
-                                        />
-                                    </div>
-                                    {/* Center Hole */}
-                                    <div className="absolute w-12 h-12 bg-[#121212] rounded-full border-2 border-gray-700 flex items-center justify-center">
-                                        <div className="w-3 h-3 bg-black rounded-full"></div>
-                                    </div>
-                                </div>
-                                
-                                <div className="mt-8 w-full max-w-lg px-8 relative z-10">
-                                    <audio controls autoPlay className="w-full h-12 rounded-lg opacity-90 hover:opacity-100 transition-opacity">
-                                        <source src={playingItem.url} type="audio/mpeg" />
-                                        Your browser does not support the audio element.
-                                    </audio>
-                                </div>
-                            </div>
-                        )}
-                    </div>
-
-                    {/* INFO BAR */}
-                    <div className="p-6 md:p-8 bg-[#1a1a1a] flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                        <div>
-                            <h2 className="text-2xl font-black text-white mb-1 line-clamp-1">{playingItem.title}</h2>
-                            <p className="text-purple-400 font-medium text-sm flex items-center gap-2">
-                                {playingItem.type === 'Music' ? <Music size={14} /> : <Film size={14} />} 
-                                {playingItem.artist}
-                            </p>
+                    {/* YOUTUBE IFRAME */}
+                    {getYouTubeId(playingItem.url) ? (
+                        <iframe 
+                            width="100%" 
+                            height="100%" 
+                            src={`https://www.youtube.com/embed/${getYouTubeId(playingItem.url)}?autoplay=1&rel=0&modestbranding=1`}
+                            title={playingItem.title} 
+                            frameBorder="0" 
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                            allowFullScreen
+                            className="absolute inset-0"
+                        ></iframe>
+                    ) : (
+                        <div className="absolute inset-0 flex flex-col items-center justify-center text-gray-500">
+                            <AlertCircle size={48} className="mb-4" />
+                            <p>Video không khả dụng hoặc link bị lỗi.</p>
                         </div>
-                        
-                        <div className="flex gap-3">
-                            <button className="flex items-center gap-2 px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded-full text-xs font-bold uppercase transition-colors">
-                                <Heart size={16} className="text-pink-500" /> Thích
-                            </button>
-                            <button 
-                                onClick={() => {
-                                    navigator.clipboard.writeText(playingItem.url);
-                                    alert("Đã sao chép link!");
-                                }}
-                                className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-full text-xs font-bold uppercase transition-colors"
-                            >
-                                <Share2 size={16} /> Chia sẻ
-                            </button>
-                        </div>
-                    </div>
+                    )}
                 </motion.div>
+
+                {/* Info Bar under Player */}
+                <div className="w-full max-w-6xl mt-6 flex items-center justify-between px-2">
+                    <div>
+                        <h2 className="text-xl md:text-2xl font-bold text-white mb-1 line-clamp-1">{playingItem.title}</h2>
+                        <p className="text-brand-cyan text-sm font-medium">{playingItem.author}</p>
+                    </div>
+                    <div className="flex gap-3">
+                        <button className="p-3 bg-gray-800 rounded-full text-white hover:bg-gray-700 transition-colors">
+                            <Heart size={20} />
+                        </button>
+                        <button 
+                            onClick={() => {
+                                navigator.clipboard.writeText(playingItem.url);
+                                alert("Đã sao chép link video!");
+                            }}
+                            className="p-3 bg-brand-cyan rounded-full text-black hover:bg-white transition-colors"
+                        >
+                            <Share2 size={20} />
+                        </button>
+                    </div>
+                </div>
             </motion.div>
         )}
       </AnimatePresence>
