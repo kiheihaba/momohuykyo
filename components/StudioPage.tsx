@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   ArrowLeft, 
@@ -11,98 +11,122 @@ import {
   Headphones, 
   Share2, 
   Heart,
-  Maximize2
+  RefreshCw,
+  AlertCircle,
+  Disc
 } from 'lucide-react';
 
 interface StudioPageProps {
   onBack: () => void;
 }
 
-type MediaType = 'video' | 'audio';
-
+// Cấu trúc dữ liệu khớp với Google Sheet
 interface MediaItem {
   id: string;
-  title: string;
-  artist: string;
-  thumbnail: string;
-  type: MediaType;
-  url: string; // YouTube ID for video, MP3 URL for audio
-  duration: string;
-  views: string;
+  title: string;       // Title
+  type: 'Video' | 'Music'; // Type
+  artist: string;      // Artist
+  url: string;         // SourceURL
+  thumbnail: string;   // Thumbnail
+  status: string;      // Status
 }
 
-// --- MOCK DATA (Dữ liệu mẫu - Sau này có thể thay bằng fetch CSV) ---
-const MEDIA_DATA: MediaItem[] = [
-  {
-    id: '1',
-    title: 'Thạnh Lợi Quê Tôi - Flycam 4K',
-    artist: 'Momo x HuyKyo Team',
-    thumbnail: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&q=80&w=1000',
-    type: 'video',
-    url: 'M7lc1UVf-VE', // YouTube Video ID
-    duration: '04:30',
-    views: '1.2K'
-  },
-  {
-    id: '2',
-    title: 'Chiều Đồng Quê (Acoustic Cover)',
-    artist: 'Hương Lúa Band',
-    thumbnail: 'https://images.unsplash.com/photo-1516280440614-6697288d5d38?auto=format&fit=crop&q=80&w=1000',
-    type: 'audio',
-    url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3', // Sample Audio
-    duration: '03:45',
-    views: '850'
-  },
-  {
-    id: '3',
-    title: 'Lễ Hội Đình Làng Thạnh Lợi 2025',
-    artist: 'Văn Hóa Xã',
-    thumbnail: 'https://images.unsplash.com/photo-1533174072545-e8d4aa97edf9?auto=format&fit=crop&q=80&w=1000',
-    type: 'video',
-    url: 'M7lc1UVf-VE',
-    duration: '15:20',
-    views: '3.5K'
-  },
-  {
-    id: '4',
-    title: 'Podcast: Chuyện Người Nông Dân Số',
-    artist: 'HuyKyo Host',
-    thumbnail: 'https://images.unsplash.com/photo-1478737270239-2f02b77ac618?auto=format&fit=crop&q=80&w=1000',
-    type: 'audio',
-    url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3',
-    duration: '25:00',
-    views: '500'
-  },
-  {
-    id: '5',
-    title: 'Vẻ đẹp Bến Lức nhìn từ trên cao',
-    artist: 'Momo Visuals',
-    thumbnail: 'https://images.unsplash.com/photo-1495573766792-75d0b938743b?auto=format&fit=crop&q=80&w=1000',
-    type: 'video',
-    url: 'M7lc1UVf-VE',
-    duration: '02:15',
-    views: '900'
-  },
-  {
-    id: '6',
-    title: 'Bolero Thôn Quê - Tuyển Tập',
-    artist: 'Nhiều nghệ sĩ',
-    thumbnail: 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?auto=format&fit=crop&q=80&w=1000',
-    type: 'audio',
-    url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3',
-    duration: '45:00',
-    views: '5.2K'
-  }
-];
+// 1. CẤU HÌNH LINK GOOGLE SHEET
+const SHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQKsrBM98OxA9UvLGqbadgJx0_uzCvOaGHDCE7FsEk3fsVzUP-u3FlS7fsQ5rN28914KcKvHVTlQcJN/pub?gid=0&single=true&output=csv';
 
 const StudioPage: React.FC<StudioPageProps> = ({ onBack }) => {
-  const [activeTab, setActiveTab] = useState<'all' | 'video' | 'audio'>('all');
+  const [activeTab, setActiveTab] = useState<'All' | 'Video' | 'Music'>('All');
+  const [mediaItems, setMediaItems] = useState<MediaItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [playingItem, setPlayingItem] = useState<MediaItem | null>(null);
 
+  // --- HELPER: Get YouTube ID ---
+  const getYouTubeId = (url: string) => {
+    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
+    const match = url.match(regExp);
+    return (match && match[2].length === 11) ? match[2] : null;
+  };
+
+  // --- HELPER: Parse CSV (Robust) ---
+  const parseCSV = (text: string): MediaItem[] => {
+    const rows = text.split('\n');
+    
+    // Hàm xử lý dòng CSV (xử lý dấu phẩy trong ngoặc kép)
+    const parseLine = (line: string): string[] => {
+        const parts = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
+        return parts.map(part => {
+            let p = part.trim();
+            if (p.startsWith('"') && p.endsWith('"')) p = p.slice(1, -1);
+            return p.replace(/""/g, '"');
+        });
+    };
+
+    if (rows.length < 2) return [];
+
+    const headers = parseLine(rows[0]);
+    // Tìm index cột không phân biệt hoa thường
+    const getIndex = (keys: string[]) => headers.findIndex(h => keys.includes(h.trim()));
+
+    const idxID = getIndex(['ID', 'id']);
+    const idxTitle = getIndex(['Title', 'title', 'Tên bài hát']);
+    const idxType = getIndex(['Type', 'type', 'Loại']);
+    const idxArtist = getIndex(['Artist', 'artist', 'Nghệ sĩ']);
+    const idxURL = getIndex(['SourceURL', 'url', 'Link']);
+    const idxThumb = getIndex(['Thumbnail', 'img', 'Ảnh bìa']);
+    const idxStatus = getIndex(['Status', 'status', 'Trạng thái']);
+
+    return rows.slice(1)
+        .filter(r => r.trim() !== '')
+        .map((row) => {
+            const cols = parseLine(row);
+            const getCol = (i: number) => (i !== -1 && cols[i]) ? cols[i].trim() : "";
+
+            const status = getCol(idxStatus);
+            // Logic lọc: Chỉ lấy dòng có Status là "Publish"
+            if (status.toLowerCase() !== 'publish') return null;
+
+            const typeRaw = getCol(idxType);
+            const type = (typeRaw.toLowerCase().includes('video')) ? 'Video' : 'Music';
+
+            return {
+                id: getCol(idxID) || Math.random().toString(36).substr(2, 9),
+                title: getCol(idxTitle) || "Chưa đặt tên",
+                type: type,
+                artist: getCol(idxArtist) || "Momo x HuyKyo",
+                url: getCol(idxURL),
+                thumbnail: getCol(idxThumb) || "https://placehold.co/600x400/1a1a1a/FFF?text=No+Image",
+                status: status
+            };
+        })
+        .filter((item): item is MediaItem => item !== null); // Loại bỏ các dòng null
+  };
+
+  // --- FETCH DATA ---
+  useEffect(() => {
+    const fetchData = async () => {
+      setIsLoading(true);
+      try {
+        const response = await fetch(SHEET_URL);
+        if (!response.ok) throw new Error("Failed to fetch data");
+        const text = await response.text();
+        const data = parseCSV(text);
+        setMediaItems(data.reverse()); // Mới nhất lên đầu
+      } catch (err) {
+        console.error("Error fetching studio data:", err);
+        setError("Không thể tải dữ liệu Studio. Vui lòng thử lại sau.");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
+
   // Filter Logic
-  const filteredMedia = activeTab === 'all' 
-    ? MEDIA_DATA 
-    : MEDIA_DATA.filter(item => item.type === activeTab);
+  const filteredMedia = activeTab === 'All' 
+    ? mediaItems 
+    : mediaItems.filter(item => item.type === activeTab);
 
   return (
     <div className="fixed inset-0 z-[60] bg-[#0f0f0f] overflow-y-auto overflow-x-hidden custom-scrollbar font-sans text-white">
@@ -121,7 +145,7 @@ const StudioPage: React.FC<StudioPageProps> = ({ onBack }) => {
             </h1>
             <span className="text-[10px] text-gray-500 font-bold uppercase tracking-[0.3em]">Entertainment</span>
         </div>
-        <div className="w-8"></div> {/* Spacer */}
+        <div className="w-8"></div>
       </div>
 
       {/* 2. HERO / FEATURED */}
@@ -151,12 +175,12 @@ const StudioPage: React.FC<StudioPageProps> = ({ onBack }) => {
       </section>
 
       {/* 3. FILTER BAR */}
-      <div className="sticky top-16 z-40 bg-[#0f0f0f]/95 backdrop-blur-md border-b border-gray-800 py-4">
+      <div className="sticky top-16 z-40 bg-[#0f0f0f]/95 backdrop-blur-md border-b border-gray-800 py-4 shadow-lg">
           <div className="flex justify-center gap-4">
               {[
-                  { id: 'all', label: 'Tất cả', icon: <Film size={16} /> },
-                  { id: 'video', label: 'Video', icon: <Video size={16} /> },
-                  { id: 'audio', label: 'Âm nhạc', icon: <Headphones size={16} /> }
+                  { id: 'All', label: 'Tất cả', icon: <Film size={16} /> },
+                  { id: 'Video', label: 'Video', icon: <Video size={16} /> },
+                  { id: 'Music', label: 'Âm nhạc', icon: <Headphones size={16} /> }
               ].map((tab) => (
                   <button
                       key={tab.id}
@@ -175,8 +199,29 @@ const StudioPage: React.FC<StudioPageProps> = ({ onBack }) => {
 
       {/* 4. MEDIA GRID */}
       <div className="max-w-7xl mx-auto px-4 py-12 pb-32">
+          {isLoading && (
+              <div className="flex flex-col items-center justify-center py-20 text-gray-500">
+                  <RefreshCw className="animate-spin mb-4 text-purple-500" size={32} />
+                  <p>Đang tải dữ liệu media...</p>
+              </div>
+          )}
+
+          {error && (
+              <div className="flex flex-col items-center justify-center py-20 text-red-500">
+                  <AlertCircle size={32} className="mb-4" />
+                  <p>{error}</p>
+              </div>
+          )}
+
+          {!isLoading && !error && filteredMedia.length === 0 && (
+              <div className="text-center py-20 text-gray-600">
+                  <Film size={48} className="mx-auto mb-4 opacity-20" />
+                  <p>Chưa có nội dung nào trong danh mục này.</p>
+              </div>
+          )}
+
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-              {filteredMedia.map((item, index) => (
+              {!isLoading && !error && filteredMedia.map((item, index) => (
                   <motion.div
                       key={item.id}
                       layout
@@ -192,6 +237,9 @@ const StudioPage: React.FC<StudioPageProps> = ({ onBack }) => {
                               src={item.thumbnail} 
                               alt={item.title} 
                               className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110 opacity-80 group-hover:opacity-100"
+                              onError={(e) => {
+                                (e.target as HTMLImageElement).src = 'https://placehold.co/600x400/1a1a1a/FFF?text=Media';
+                              }}
                           />
                           
                           {/* Play Overlay */}
@@ -203,8 +251,8 @@ const StudioPage: React.FC<StudioPageProps> = ({ onBack }) => {
 
                           {/* Badges */}
                           <div className="absolute top-2 right-2 bg-black/60 backdrop-blur-sm px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider flex items-center gap-1">
-                              {item.type === 'video' ? <Video size={10} className="text-blue-400" /> : <Music size={10} className="text-pink-400" />}
-                              {item.duration}
+                              {item.type === 'Video' ? <Video size={10} className="text-blue-400" /> : <Music size={10} className="text-pink-400" />}
+                              {item.type}
                           </div>
                       </div>
 
@@ -215,7 +263,7 @@ const StudioPage: React.FC<StudioPageProps> = ({ onBack }) => {
                           </h3>
                           <div className="flex justify-between items-center mt-1 text-xs text-gray-500">
                               <span>{item.artist}</span>
-                              <span className="flex items-center gap-1"><Maximize2 size={10} /> {item.views}</span>
+                              <span className="flex items-center gap-1 group-hover:text-white transition-colors">Phát ngay <Play size={10} /></span>
                           </div>
                       </div>
                   </motion.div>
@@ -249,32 +297,56 @@ const StudioPage: React.FC<StudioPageProps> = ({ onBack }) => {
                     onClick={(e) => e.stopPropagation()}
                 >
                     {/* PLAYER CONTENT */}
-                    <div className="aspect-video w-full bg-black relative flex items-center justify-center">
-                        {playingItem.type === 'video' ? (
-                            <iframe 
-                                width="100%" 
-                                height="100%" 
-                                src={`https://www.youtube.com/embed/${playingItem.url}?autoplay=1&rel=0`}
-                                title={playingItem.title} 
-                                frameBorder="0" 
-                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
-                                allowFullScreen
-                                className="absolute inset-0"
-                            ></iframe>
+                    <div className="aspect-video w-full bg-black relative flex items-center justify-center overflow-hidden">
+                        {playingItem.type === 'Video' ? (
+                            getYouTubeId(playingItem.url) ? (
+                                <iframe 
+                                    width="100%" 
+                                    height="100%" 
+                                    src={`https://www.youtube.com/embed/${getYouTubeId(playingItem.url)}?autoplay=1&rel=0`}
+                                    title={playingItem.title} 
+                                    frameBorder="0" 
+                                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                                    allowFullScreen
+                                    className="absolute inset-0"
+                                ></iframe>
+                            ) : (
+                                <div className="text-center p-4">
+                                    <p className="text-red-500 mb-2">Video Source Error</p>
+                                    <a href={playingItem.url} target="_blank" rel="noreferrer" className="text-blue-400 hover:underline">
+                                        Mở trực tiếp link gốc
+                                    </a>
+                                </div>
+                            )
                         ) : (
-                            <div className="w-full h-full flex flex-col items-center justify-center bg-[url('https://www.transparenttextures.com/patterns/dark-matter.png')]">
-                                {/* Audio Visualizer Placeholder */}
-                                <div className="w-32 h-32 md:w-48 md:h-48 rounded-full border-4 border-purple-500/30 flex items-center justify-center relative animate-pulse-fast">
-                                    <img 
-                                        src={playingItem.thumbnail} 
-                                        alt="Album Art" 
-                                        className="w-full h-full rounded-full object-cover opacity-80"
-                                    />
-                                    <div className="absolute inset-0 bg-gradient-to-tr from-purple-500/20 to-pink-500/20 rounded-full"></div>
+                            // AUDIO PLAYER INTERFACE
+                            <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-gray-900 to-black relative">
+                                {/* Background Blur */}
+                                <img 
+                                    src={playingItem.thumbnail} 
+                                    alt="Blur BG" 
+                                    className="absolute inset-0 w-full h-full object-cover opacity-20 blur-2xl"
+                                />
+                                
+                                {/* Rotating Disc Animation */}
+                                <div className="w-48 h-48 md:w-64 md:h-64 rounded-full border-4 border-gray-800 shadow-2xl flex items-center justify-center relative z-10 animate-[spin_10s_linear_infinite]">
+                                    <div className="absolute inset-0 rounded-full border border-white/10"></div>
+                                    <div className="w-full h-full rounded-full overflow-hidden">
+                                        <img 
+                                            src={playingItem.thumbnail} 
+                                            alt="Album Art" 
+                                            className="w-full h-full object-cover"
+                                            onError={(e) => { (e.target as HTMLImageElement).src = 'https://placehold.co/400x400/333/FFF?text=Music'; }}
+                                        />
+                                    </div>
+                                    {/* Center Hole */}
+                                    <div className="absolute w-12 h-12 bg-[#121212] rounded-full border-2 border-gray-700 flex items-center justify-center">
+                                        <div className="w-3 h-3 bg-black rounded-full"></div>
+                                    </div>
                                 </div>
                                 
-                                <div className="mt-8 w-full max-w-md px-8">
-                                    <audio controls autoPlay className="w-full h-10 rounded-full opacity-90 hover:opacity-100 transition-opacity">
+                                <div className="mt-8 w-full max-w-lg px-8 relative z-10">
+                                    <audio controls autoPlay className="w-full h-12 rounded-lg opacity-90 hover:opacity-100 transition-opacity">
                                         <source src={playingItem.url} type="audio/mpeg" />
                                         Your browser does not support the audio element.
                                     </audio>
@@ -286,9 +358,9 @@ const StudioPage: React.FC<StudioPageProps> = ({ onBack }) => {
                     {/* INFO BAR */}
                     <div className="p-6 md:p-8 bg-[#1a1a1a] flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                         <div>
-                            <h2 className="text-2xl font-black text-white mb-1">{playingItem.title}</h2>
+                            <h2 className="text-2xl font-black text-white mb-1 line-clamp-1">{playingItem.title}</h2>
                             <p className="text-purple-400 font-medium text-sm flex items-center gap-2">
-                                {playingItem.type === 'audio' ? <Music size={14} /> : <Film size={14} />} 
+                                {playingItem.type === 'Music' ? <Music size={14} /> : <Film size={14} />} 
                                 {playingItem.artist}
                             </p>
                         </div>
@@ -297,7 +369,13 @@ const StudioPage: React.FC<StudioPageProps> = ({ onBack }) => {
                             <button className="flex items-center gap-2 px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded-full text-xs font-bold uppercase transition-colors">
                                 <Heart size={16} className="text-pink-500" /> Thích
                             </button>
-                            <button className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-full text-xs font-bold uppercase transition-colors">
+                            <button 
+                                onClick={() => {
+                                    navigator.clipboard.writeText(playingItem.url);
+                                    alert("Đã sao chép link!");
+                                }}
+                                className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-full text-xs font-bold uppercase transition-colors"
+                            >
                                 <Share2 size={16} /> Chia sẻ
                             </button>
                         </div>
