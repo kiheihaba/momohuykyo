@@ -52,12 +52,34 @@ const StudioPage: React.FC<StudioPageProps> = ({ onBack }) => {
   // Hero Item (Bài nổi bật)
   const [heroItem, setHeroItem] = useState<MediaItem | null>(null);
 
-  // --- HELPER: Get YouTube ID (Robust) ---
+  // --- HELPER: Get YouTube ID (For Thumbnails) ---
   const getYouTubeId = (url: string) => {
     if (!url) return null;
     const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
     const match = url.match(regExp);
     return (match && match[2].length === 11) ? match[2] : null;
+  };
+
+  // --- HELPER: Get Embed Source (YouTube & Google Drive) ---
+  const getEmbedSource = (url: string) => {
+    if (!url) return null;
+
+    // 1. Check YouTube
+    const ytId = getYouTubeId(url);
+    if (ytId) {
+      return `https://www.youtube.com/embed/${ytId}?autoplay=1&rel=0&modestbranding=1`;
+    }
+
+    // 2. Check Google Drive
+    if (url.includes('drive.google.com')) {
+      // Regex lấy File ID từ link Drive (VD: .../file/d/ID_FILE/view...)
+      const driveMatch = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
+      if (driveMatch && driveMatch[1]) {
+        return `https://drive.google.com/file/d/${driveMatch[1]}/preview`;
+      }
+    }
+
+    return null;
   };
 
   // --- HELPER: Parse CSV ---
@@ -325,24 +347,32 @@ const StudioPage: React.FC<StudioPageProps> = ({ onBack }) => {
                     className="w-full max-w-6xl aspect-video bg-black rounded-2xl overflow-hidden shadow-[0_0_50px_rgba(0,255,255,0.1)] border border-white/10 relative"
                     onClick={(e) => e.stopPropagation()}
                 >
-                    {/* YOUTUBE IFRAME */}
-                    {getYouTubeId(playingItem.url) ? (
-                        <iframe 
-                            width="100%" 
-                            height="100%" 
-                            src={`https://www.youtube.com/embed/${getYouTubeId(playingItem.url)}?autoplay=1&rel=0&modestbranding=1`}
-                            title={playingItem.title} 
-                            frameBorder="0" 
-                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
-                            allowFullScreen
-                            className="absolute inset-0"
-                        ></iframe>
-                    ) : (
-                        <div className="absolute inset-0 flex flex-col items-center justify-center text-gray-500">
-                            <AlertCircle size={48} className="mb-4" />
-                            <p>Video không khả dụng hoặc link bị lỗi.</p>
-                        </div>
-                    )}
+                    {/* VIDEO IFRAME (YOUTUBE OR DRIVE) */}
+                    {(() => {
+                        const embedSrc = getEmbedSource(playingItem.url);
+                        if (embedSrc) {
+                            return (
+                                <iframe 
+                                    width="100%" 
+                                    height="100%" 
+                                    src={embedSrc}
+                                    title={playingItem.title} 
+                                    frameBorder="0" 
+                                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                                    allowFullScreen
+                                    className="absolute inset-0"
+                                ></iframe>
+                            );
+                        } else {
+                            return (
+                                <div className="absolute inset-0 flex flex-col items-center justify-center text-gray-500">
+                                    <AlertCircle size={48} className="mb-4" />
+                                    <p>Video không khả dụng hoặc link bị lỗi.</p>
+                                    <p className="text-xs mt-2 text-gray-600">Link: {playingItem.url}</p>
+                                </div>
+                            );
+                        }
+                    })()}
                 </motion.div>
 
                 {/* Info Bar under Player */}
