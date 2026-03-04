@@ -41,8 +41,10 @@ const Navbar: React.FC<NavbarProps> = ({ onOpenMerch }) => {
 
   return (
     <nav
-      className={`fixed w-full z-50 transition-all duration-300 ${
-        isScrolled ? 'bg-brand-black/90 backdrop-blur-md border-b border-white/10' : 'bg-transparent'
+      className={`fixed w-full z-50 transition-all duration-500 ${
+        isScrolled 
+          ? 'glass-panel border-b border-white/5 shadow-[0_4px_30px_rgba(0,0,0,0.1)]' 
+          : 'bg-transparent'
       }`}
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

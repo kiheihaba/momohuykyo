@@ -63,45 +63,48 @@ const ProductShowcase: React.FC<ProductShowcaseProps> = ({ onBack }) => {
   const gridProducts = products.slice(1);
 
   return (
-    <div className="fixed inset-0 z-50 bg-[#121212] overflow-y-auto overflow-x-hidden custom-scrollbar">
+    <div className="fixed inset-0 z-50 bg-[#121212] overflow-y-auto overflow-x-hidden custom-scrollbar bg-noise">
       {/* Header */}
-      <div className="sticky top-0 z-40 bg-[#121212]/90 backdrop-blur-md border-b border-gray-800 px-4 md:px-8 h-20 flex items-center justify-between">
+      <div className="sticky top-0 z-40 glass-panel border-b border-white/10 px-4 md:px-8 h-20 flex items-center justify-between">
         <button 
           onClick={onBack}
-          className="flex items-center gap-2 text-white hover:text-brand-cyan transition-colors uppercase font-bold text-sm tracking-widest"
+          className="flex items-center gap-2 text-white hover:text-brand-cyan transition-colors uppercase font-bold text-sm tracking-widest group"
         >
-          <ArrowLeft size={20} /> Trang chủ
+          <ArrowLeft size={20} className="group-hover:-translate-x-1 transition-transform" /> Trang chủ
         </button>
         <div className="text-xl font-black tracking-tighter text-white">
           MERCH <span className="text-brand-cyan">STORE</span>
         </div>
-        <div className="relative p-2">
-            <ShoppingBag className="text-white hover:text-brand-cyan cursor-pointer" />
-            <span className="absolute top-0 right-0 w-4 h-4 bg-brand-cyan text-black text-[10px] font-bold rounded-full flex items-center justify-center">0</span>
+        <div className="relative p-2 group cursor-pointer">
+            <ShoppingBag className="text-white group-hover:text-brand-cyan transition-colors" />
+            <span className="absolute top-0 right-0 w-4 h-4 bg-brand-cyan text-black text-[10px] font-bold rounded-full flex items-center justify-center shadow-[0_0_10px_rgba(0,255,255,0.5)]">0</span>
         </div>
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-24 pt-10">
         
         {/* Hero Collection */}
-        <div className="mb-24">
-          <div className="flex flex-col md:flex-row items-center gap-12">
-            <div className="w-full md:w-1/2 relative group cursor-pointer" onClick={() => setSelectedProduct(heroProduct)}>
+        <div className="mb-24 relative">
+          {/* Background Glow */}
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-brand-cyan/10 rounded-full blur-[100px] pointer-events-none"></div>
+
+          <div className="flex flex-col md:flex-row items-center gap-12 relative z-10">
+            <div className="w-full md:w-1/2 relative group cursor-pointer perspective-1000" onClick={() => setSelectedProduct(heroProduct)}>
               {/* Spotlight Effect */}
               <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-full bg-brand-cyan/20 blur-[100px] rounded-full opacity-20 group-hover:opacity-40 transition-opacity duration-500 pointer-events-none"></div>
               
               <motion.div 
-                whileHover={{ scale: 1.05, rotate: -2 }}
+                whileHover={{ scale: 1.02, rotateY: 5 }}
                 transition={{ duration: 0.5 }}
                 className="relative z-10"
               >
                 <img 
                   src={heroProduct.image} 
                   alt={heroProduct.name}
-                  className="w-full h-auto object-cover rounded-lg shadow-2xl drop-shadow-[0_0_20px_rgba(0,255,255,0.15)]"
+                  className="w-full h-auto object-cover rounded-2xl shadow-2xl drop-shadow-[0_0_30px_rgba(0,255,255,0.1)] border border-white/10"
                 />
                 {heroProduct.badge && (
-                  <div className="absolute top-4 left-4 bg-brand-cyan text-black font-black uppercase px-4 py-2 text-sm tracking-widest shadow-[0_0_10px_#00FFFF]">
+                  <div className="absolute top-6 left-6 bg-brand-cyan text-black font-black uppercase px-4 py-2 text-sm tracking-widest shadow-[0_0_15px_#00FFFF] clip-path-slant">
                     {heroProduct.badge}
                   </div>
                 )}
@@ -109,19 +112,23 @@ const ProductShowcase: React.FC<ProductShowcaseProps> = ({ onBack }) => {
             </div>
             
             <div className="w-full md:w-1/2 text-center md:text-left">
-              <h1 className="text-4xl md:text-6xl font-black text-white uppercase mb-4 leading-none">
+              <motion.h1 
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="text-4xl md:text-7xl font-black text-white uppercase mb-6 leading-none tracking-tight"
+              >
                 {heroProduct.name}
-              </h1>
-              <p className="text-gray-400 text-lg mb-8 max-w-lg">
+              </motion.h1>
+              <p className="text-gray-400 text-lg mb-10 max-w-lg leading-relaxed">
                 {heroProduct.description}
               </p>
-              <div className="flex items-center justify-center md:justify-start gap-6">
-                 <span className="text-3xl font-bold text-brand-cyan">
+              <div className="flex flex-col md:flex-row items-center justify-center md:justify-start gap-8">
+                 <span className="text-4xl font-bold text-brand-cyan drop-shadow-[0_0_10px_rgba(0,255,255,0.3)]">
                    {heroProduct.price.toLocaleString('vi-VN')} đ
                  </span>
                  <button 
                     onClick={() => setSelectedProduct(heroProduct)}
-                    className="px-8 py-3 bg-white text-black font-bold uppercase hover:bg-brand-cyan transition-colors clip-path-slant"
+                    className="px-10 py-4 bg-white text-black font-bold uppercase hover:bg-brand-cyan transition-all duration-300 clip-path-slant hover:shadow-[0_0_20px_rgba(0,255,255,0.5)] tracking-wider"
                  >
                     Xem chi tiết
                  </button>
@@ -131,8 +138,9 @@ const ProductShowcase: React.FC<ProductShowcaseProps> = ({ onBack }) => {
         </div>
 
         {/* Product Grid */}
-        <h2 className="text-2xl font-bold text-white uppercase mb-8 border-l-4 border-brand-cyan pl-4">
+        <h2 className="text-2xl font-bold text-white uppercase mb-10 border-l-4 border-brand-cyan pl-6 flex items-center gap-4">
           Bộ sưu tập khác
+          <span className="h-[1px] flex-1 bg-white/10"></span>
         </h2>
         
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8">
@@ -142,7 +150,7 @@ const ProductShowcase: React.FC<ProductShowcaseProps> = ({ onBack }) => {
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
-              className="bg-[#1a1a1a] border border-gray-800 group hover:border-brand-cyan/50 transition-all duration-300"
+              className="bg-[#1a1a1a] border border-white/5 group hover:border-brand-cyan/50 transition-all duration-500 rounded-xl overflow-hidden hover:-translate-y-2 hover:shadow-[0_10px_30px_rgba(0,0,0,0.5)]"
             >
               <div className="relative overflow-hidden aspect-[3/4] cursor-pointer" onClick={() => setSelectedProduct(product)}>
                 <img 
@@ -150,21 +158,23 @@ const ProductShowcase: React.FC<ProductShowcaseProps> = ({ onBack }) => {
                   alt={product.name}
                   className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
                 />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-60 group-hover:opacity-40 transition-opacity"></div>
+                
                 {product.badge && (
-                  <div className="absolute top-2 right-2 bg-white/10 backdrop-blur-md text-white text-xs font-bold px-2 py-1 uppercase border border-white/20">
+                  <div className="absolute top-3 right-3 bg-white/10 backdrop-blur-md text-white text-[10px] font-bold px-3 py-1 uppercase border border-white/20 rounded-full">
                     {product.badge}
                   </div>
                 )}
-                {/* Add to Cart overlay on mobile/desktop */}
-                <div className="absolute bottom-0 left-0 right-0 p-4 translate-y-full group-hover:translate-y-0 transition-transform duration-300 bg-black/80 backdrop-blur-sm flex justify-center">
-                    <span className="text-brand-cyan text-sm font-bold uppercase">Xem nhanh</span>
+                {/* Add to Cart overlay */}
+                <div className="absolute bottom-0 left-0 right-0 p-4 translate-y-full group-hover:translate-y-0 transition-transform duration-300 bg-black/80 backdrop-blur-md flex justify-center border-t border-white/10">
+                    <span className="text-brand-cyan text-sm font-bold uppercase tracking-widest">Xem nhanh</span>
                 </div>
               </div>
               
-              <div className="p-4">
-                <h3 className="text-lg font-bold text-white uppercase mb-1 truncate">{product.name}</h3>
+              <div className="p-6">
+                <h3 className="text-lg font-bold text-white uppercase mb-2 truncate group-hover:text-brand-cyan transition-colors">{product.name}</h3>
                 <div className="flex justify-between items-center">
-                  <span className="text-brand-cyan font-semibold">
+                  <span className="text-gray-300 font-semibold group-hover:text-white transition-colors">
                     {product.price.toLocaleString('vi-VN')} đ
                   </span>
                   <button 
@@ -172,9 +182,9 @@ const ProductShowcase: React.FC<ProductShowcaseProps> = ({ onBack }) => {
                       e.stopPropagation();
                       setSelectedProduct(product);
                     }}
-                    className="p-2 bg-gray-800 text-white rounded-full hover:bg-brand-cyan hover:text-black transition-colors"
+                    className="w-10 h-10 bg-white/5 rounded-full flex items-center justify-center text-white hover:bg-brand-cyan hover:text-black transition-all duration-300"
                   >
-                    <ShoppingBag size={16} />
+                    <ShoppingBag size={18} />
                   </button>
                 </div>
               </div>

@@ -41,76 +41,106 @@ const Hero: React.FC = () => {
   };
 
   return (
-    <section id="home" className="relative h-screen flex items-center justify-center overflow-hidden bg-brand-black">
+    <section id="home" className="relative h-screen flex items-center justify-center overflow-hidden bg-brand-black bg-noise">
+      {/* Dynamic Background Gradients */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-brand-cyan/20 rounded-full blur-[120px] animate-float"></div>
+        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-purple-500/20 rounded-full blur-[120px] animate-float" style={{ animationDelay: '2s' }}></div>
+      </div>
+
       {/* Background Image with Overlay */}
       <div className="absolute inset-0 z-0">
          <img 
             src="https://i.postimg.cc/nLjKqHYg/Google-AI-Studio-2026-01-24T20-56-54-627Z.png" 
             alt="Momo x HuyKyo Cover" 
-            className="w-full h-full object-cover opacity-50"
+            className="w-full h-full object-cover opacity-40 mix-blend-overlay"
          />
-         <div className="absolute inset-0 bg-gradient-to-b from-brand-black/70 via-brand-black/50 to-brand-black"></div>
+         <div className="absolute inset-0 bg-gradient-to-b from-brand-black/80 via-brand-black/60 to-brand-black"></div>
       </div>
 
-      {/* Abstract Background Grid (Overlaying image slightly for texture) */}
-      <div className="absolute inset-0 z-0 opacity-20 pointer-events-none">
-        <div className="absolute inset-0 bg-[linear-gradient(to_right,#1f1f1f_1px,transparent_1px),linear-gradient(to_bottom,#1f1f1f_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)]"></div>
-        <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-brand-cyan to-transparent opacity-50"></div>
-      </div>
+      {/* Abstract Background Grid */}
+      <div className="absolute inset-0 z-0 opacity-30 pointer-events-none bg-grid-pattern [mask-image:radial-gradient(ellipse_60%_50%_at_50%_50%,#000_70%,transparent_100%)]"></div>
 
       <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8 }}
+          transition={{ duration: 0.8, ease: "easeOut" }}
         >
-          <span className="inline-block py-1 px-3 rounded-full bg-brand-cyan/10 border border-brand-cyan/30 text-brand-cyan text-xs font-bold tracking-[0.2em] uppercase mb-6 backdrop-blur-sm">
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.2, duration: 0.5 }}
+            className="inline-block py-1 px-4 rounded-full bg-white/5 border border-white/10 backdrop-blur-md text-brand-cyan text-xs font-bold tracking-[0.2em] uppercase mb-8 shadow-[0_0_15px_rgba(0,255,255,0.3)]"
+          >
             Future of Solopreneur
-          </span>
+          </motion.div>
           
           <div 
-            className="relative cursor-default"
+            className="relative cursor-default perspective-1000"
             onMouseEnter={() => setIsHovered(true)}
             onMouseLeave={() => setIsHovered(false)}
           >
              <motion.h1 
-                className="text-5xl md:text-7xl lg:text-8xl font-black text-white uppercase tracking-tighter mb-6 leading-tight select-none drop-shadow-2xl"
+                className="text-5xl md:text-7xl lg:text-9xl font-black text-white uppercase tracking-tighter mb-6 leading-none select-none drop-shadow-2xl"
                 animate={isHovered ? "visible" : "hidden"}
                 variants={glitchVariants}
              >
-                Tiên phong Kỷ nguyên <br />
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-white via-brand-cyan to-white">
-                    Nội dung số & AI
+                Tiên phong <br />
+                <span className="relative inline-block">
+                  <span className="absolute inset-0 bg-gradient-to-r from-brand-cyan to-purple-500 blur-2xl opacity-30"></span>
+                  <span className="relative text-transparent bg-clip-text bg-gradient-to-r from-white via-brand-cyan to-white bg-[length:200%_auto] animate-shimmer">
+                      Nội dung số & AI
+                  </span>
                 </span>
              </motion.h1>
           </div>
 
-          <p className="mt-4 max-w-2xl mx-auto text-xl text-gray-200 font-light mb-10 drop-shadow-md">
-            Hệ sinh thái đa dạng từ giải trí, giáo dục đến thời trang phong cách sống dành cho <span className="text-white font-semibold">Gen Z</span>.
-          </p>
+          <motion.p 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.4, duration: 0.8 }}
+            className="mt-6 max-w-2xl mx-auto text-lg md:text-xl text-gray-300 font-light mb-12 leading-relaxed"
+          >
+            Hệ sinh thái đa dạng từ giải trí, giáo dục đến thời trang phong cách sống dành cho <span className="text-white font-semibold border-b border-brand-cyan/50">Gen Z</span>.
+          </motion.p>
 
-          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.6, duration: 0.5 }}
+            className="flex flex-col sm:flex-row gap-6 justify-center items-center"
+          >
             <a 
               href="#ecosystem" 
               onClick={handleScrollToEcosystem}
-              className="group relative px-8 py-4 bg-transparent border border-brand-cyan text-brand-cyan font-bold uppercase tracking-wider overflow-hidden backdrop-blur-sm hover:bg-brand-cyan/10 transition-colors cursor-pointer"
+              className="group relative px-8 py-4 bg-brand-cyan text-brand-black font-bold uppercase tracking-wider overflow-hidden hover:shadow-[0_0_20px_rgba(0,255,255,0.5)] transition-all duration-300 clip-path-slant"
             >
-              <span className="absolute inset-0 w-full h-full bg-brand-cyan/10 transform -translate-x-full skew-x-12 transition-transform duration-300 group-hover:translate-x-0"></span>
-              <span className="relative flex items-center gap-2">
-                Khám phá Hệ sinh thái <ArrowRight size={20} />
+              <span className="relative flex items-center gap-2 z-10">
+                Khám phá Hệ sinh thái <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
               </span>
             </a>
-          </div>
+            
+            <a 
+              href="#vision"
+              className="px-8 py-4 text-white font-bold uppercase tracking-wider hover:text-brand-cyan transition-colors relative group"
+            >
+              <span className="relative z-10">Tìm hiểu thêm</span>
+              <span className="absolute bottom-0 left-0 w-0 h-[1px] bg-brand-cyan transition-all duration-300 group-hover:w-full"></span>
+            </a>
+          </motion.div>
         </motion.div>
       </div>
 
       {/* Scroll Down Indicator */}
       <motion.div 
-        className="absolute bottom-10 left-1/2 transform -translate-x-1/2"
-        animate={{ y: [0, 10, 0] }}
-        transition={{ duration: 1.5, repeat: Infinity }}
+        className="absolute bottom-10 left-1/2 transform -translate-x-1/2 flex flex-col items-center gap-2"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1, y: [0, 10, 0] }}
+        transition={{ delay: 1, duration: 2, repeat: Infinity }}
       >
-        <div className="w-[1px] h-16 bg-gradient-to-b from-transparent via-brand-cyan to-transparent"></div>
+        <span className="text-[10px] uppercase tracking-widest text-gray-500">Scroll</span>
+        <div className="w-[1px] h-12 bg-gradient-to-b from-brand-cyan/0 via-brand-cyan to-brand-cyan/0"></div>
       </motion.div>
     </section>
   );
