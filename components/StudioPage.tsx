@@ -33,7 +33,7 @@ interface MediaItem {
 }
 
 // 1. CẤU HÌNH LINK GOOGLE SHEET
-const SHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRJrotBdzd-po6z_Zd6fbew0pqGgdDdZjRMf7vutpfJia2aFpNyTZNdvGZxN4MfcGtRwJWUrmICvZMF/pub?gid=2048029384&single=true&output=csv';
+const SHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTWiN7rYhho8f92YqkOWeA968S5F6KjGMswSag1p9nUtLVKUX5bSPPOyXWFWWdOBg/pub?gid=1605518592&single=true&output=csv';
 
 const filters = [
     { id: 'all', label: 'Tất cả', icon: <Film size={16} /> },
@@ -150,7 +150,7 @@ const StudioPage: React.FC<StudioPageProps> = ({ onBack }) => {
         setMediaItems(data.reverse()); 
       } catch (err) {
         console.error("Error fetching studio data:", err);
-        setError("Không thể tải dữ liệu Studio. Vui lòng thử lại sau.");
+        setError("Lỗi kết nối");
       } finally {
         setIsLoading(false);
       }
@@ -264,10 +264,9 @@ const StudioPage: React.FC<StudioPageProps> = ({ onBack }) => {
           )}
 
           {error && (
-              <div className="flex flex-col items-center justify-center py-32 text-red-500">
-                  <AlertCircle size={32} className="mb-4" />
-                  <p>{error}</p>
-              </div>
+            <div className="error-msg" style={{textAlign: 'center', padding: '50px', color: '#ff4d4d', fontWeight: 'bold', fontSize: '18px'}}>
+                Hệ thống đang bảo trì dữ liệu. Bà con vui lòng quay lại sau vài phút nhé!
+            </div>
           )}
 
           {/* MEDIA GRID */}

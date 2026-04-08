@@ -38,7 +38,7 @@ interface CommunityItem {
 }
 
 // URL Google Sheet Mới
-const SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRJrotBdzd-po6z_Zd6fbew0pqGgdDdZjRMf7vutpfJia2aFpNyTZNdvGZxN4MfcGtRwJWUrmICvZMF/pub?gid=2048156150&single=true&output=csv";
+const SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTWiN7rYhho8f92YqkOWeA968S5F6KjGMswSag1p9nUtLVKUX5bSPPOyXWFWWdOBg/pub?gid=52029984&single=true&output=csv";
 
 const filters = [
   { id: 'all', label: 'Tất cả tin', icon: <HeartHandshake size={16} />, color: 'bg-gray-800 text-white border-gray-600' },
@@ -52,6 +52,7 @@ const CommunityPage: React.FC<CommunityPageProps> = ({ onBack }) => {
   const [activeFilter, setActiveFilter] = useState("all");
   const [items, setItems] = useState<CommunityItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [selectedItem, setSelectedItem] = useState<CommunityItem | null>(null);
 
   // --- PARSE CSV ---
@@ -112,11 +113,13 @@ const CommunityPage: React.FC<CommunityPageProps> = ({ onBack }) => {
       setIsLoading(true);
       try {
         const response = await fetch(SHEET_URL);
+        if (!response.ok) throw new Error("Failed to fetch");
         const text = await response.text();
         const data = parseCSV(text);
         setItems(data.reverse()); // Tin mới nhất lên đầu
       } catch (err) {
         console.error(err);
+        setError("Lỗi kết nối");
       } finally {
         setIsLoading(false);
       }
@@ -195,7 +198,13 @@ const CommunityPage: React.FC<CommunityPageProps> = ({ onBack }) => {
             </div>
         )}
 
-        {!isLoading && filteredItems.length === 0 && (
+        {error && (
+            <div className="error-msg" style={{textAlign: 'center', padding: '50px', color: '#ff4d4d', fontWeight: 'bold', fontSize: '18px'}}>
+                Hệ thống đang bảo trì dữ liệu. Bà con vui lòng quay lại sau vài phút nhé!
+            </div>
+        )}
+
+        {!isLoading && !error && filteredItems.length === 0 && (
             <div className="text-center py-20 text-gray-600">
                 <HeartHandshake size={48} className="mx-auto mb-4 opacity-20" />
                 <p>Chưa có tin nào trong mục này.</p>

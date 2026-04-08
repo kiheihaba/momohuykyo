@@ -43,7 +43,7 @@ interface JobItem {
 }
 
 // Link CSV Google Sheet Việc Làm
-const SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRJrotBdzd-po6z_Zd6fbew0pqGgdDdZjRMf7vutpfJia2aFpNyTZNdvGZxN4MfcGtRwJWUrmICvZMF/pub?gid=1687973723&single=true&output=csv";
+const SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTWiN7rYhho8f92YqkOWeA968S5F6KjGMswSag1p9nUtLVKUX5bSPPOyXWFWWdOBg/pub?gid=866720218&single=true&output=csv";
 
 // Bộ lọc nhanh
 const quickFilters = [
@@ -237,9 +237,8 @@ const JobListingPage: React.FC<JobListingPageProps> = ({ onBack }) => {
         )}
 
         {error && (
-            <div className="flex items-center gap-3 bg-red-900/20 border border-red-900/50 p-4 rounded-xl text-red-400">
-                <AlertCircle size={24} />
-                <p>{error}</p>
+            <div className="error-msg" style={{textAlign: 'center', padding: '50px', color: '#ff4d4d', fontWeight: 'bold', fontSize: '18px'}}>
+                Hệ thống đang bảo trì dữ liệu. Bà con vui lòng quay lại sau vài phút nhé!
             </div>
         )}
 

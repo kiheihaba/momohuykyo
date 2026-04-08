@@ -30,7 +30,7 @@ interface FashionItem {
 }
 
 // Link CSV Google Sheet (Giữ nguyên)
-const SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRJrotBdzd-po6z_Zd6fbew0pqGgdDdZjRMf7vutpfJia2aFpNyTZNdvGZxN4MfcGtRwJWUrmICvZMF/pub?gid=1704379784&single=true&output=csv";
+const SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTWiN7rYhho8f92YqkOWeA968S5F6KjGMswSag1p9nUtLVKUX5bSPPOyXWFWWdOBg/pub?gid=1154217570&single=true&output=csv";
 
 // Danh mục hiển thị (Tùy chỉnh theo nhu cầu)
 const categories = [
@@ -206,9 +206,8 @@ const FashionPage: React.FC<FashionPageProps> = ({ onBack }) => {
         )}
 
         {error && (
-            <div className="flex flex-col items-center justify-center py-10 text-red-500 bg-red-50 rounded-xl border border-red-100">
-                <AlertCircle size={24} className="mb-2" />
-                <p>{error}</p>
+            <div className="error-msg" style={{textAlign: 'center', padding: '50px', color: '#ff4d4d', fontWeight: 'bold', fontSize: '18px'}}>
+                Hệ thống đang bảo trì dữ liệu. Bà con vui lòng quay lại sau vài phút nhé!
             </div>
         )}
 

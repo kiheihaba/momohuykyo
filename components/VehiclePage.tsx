@@ -46,7 +46,7 @@ interface VehicleItem {
 }
 
 // URL Google Sheet
-const SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRJrotBdzd-po6z_Zd6fbew0pqGgdDdZjRMf7vutpfJia2aFpNyTZNdvGZxN4MfcGtRwJWUrmICvZMF/pub?gid=522785751&single=true&output=csv";
+const SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTWiN7rYhho8f92YqkOWeA968S5F6KjGMswSag1p9nUtLVKUX5bSPPOyXWFWWdOBg/pub?gid=1772877519&single=true&output=csv";
 
 // Bộ lọc danh mục
 const vehicleCategories = [
@@ -70,6 +70,7 @@ const VehiclePage: React.FC<VehiclePageProps> = ({ onBack }) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [vehicles, setVehicles] = useState<VehicleItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [selectedVehicle, setSelectedVehicle] = useState<VehicleItem | null>(null);
 
   // Helper: Parse Price Value
@@ -158,11 +159,13 @@ const VehiclePage: React.FC<VehiclePageProps> = ({ onBack }) => {
       setIsLoading(true);
       try {
         const response = await fetch(SHEET_URL);
+        if (!response.ok) throw new Error("Failed to fetch");
         const text = await response.text();
         const data = parseCSV(text);
         setVehicles(data);
       } catch (err) {
         console.error("Error:", err);
+        setError("Lỗi kết nối");
       } finally {
         setIsLoading(false);
       }
@@ -274,7 +277,13 @@ const VehiclePage: React.FC<VehiclePageProps> = ({ onBack }) => {
             </div>
         )}
 
-        {!isLoading && filteredVehicles.length === 0 && (
+        {error && (
+            <div className="error-msg" style={{textAlign: 'center', padding: '50px', color: '#ff4d4d', fontWeight: 'bold', fontSize: '18px'}}>
+                Hệ thống đang bảo trì dữ liệu. Bà con vui lòng quay lại sau vài phút nhé!
+            </div>
+        )}
+
+        {!isLoading && !error && filteredVehicles.length === 0 && (
             <div className="text-center py-20 text-gray-600">
                 <Car size={48} className="mx-auto mb-4 opacity-20" />
                 <p>Không tìm thấy xe phù hợp.</p>

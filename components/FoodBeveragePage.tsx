@@ -42,7 +42,7 @@ interface FoodItem {
 }
 
 // Google Sheet CSV Link
-const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRJrotBdzd-po6z_Zd6fbew0pqGgdDdZjRMf7vutpfJia2aFpNyTZNdvGZxN4MfcGtRwJWUrmICvZMF/pub?gid=0&single=true&output=csv";
+const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTWiN7rYhho8f92YqkOWeA968S5F6KjGMswSag1p9nUtLVKUX5bSPPOyXWFWWdOBg/pub?gid=2034133228&single=true&output=csv";
 
 // Cập nhật ID danh mục khớp với dữ liệu cột 'loai_mon' trong CSV
 const categories = [
@@ -265,9 +265,8 @@ const FoodBeveragePage: React.FC<FoodBeveragePageProps> = ({ onBack }) => {
         )}
 
         {error && (
-           <div className="flex flex-col items-center justify-center py-20 text-red-500">
-             <AlertCircle size={32} className="mb-4" />
-             <p>{error}</p>
+           <div className="error-msg" style={{textAlign: 'center', padding: '50px', color: '#ff4d4d', fontWeight: 'bold', fontSize: '18px'}}>
+             Hệ thống đang bảo trì dữ liệu. Bà con vui lòng quay lại sau vài phút nhé!
            </div>
         )}
 

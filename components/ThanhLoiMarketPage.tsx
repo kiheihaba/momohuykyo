@@ -56,9 +56,9 @@ interface MarketListing {
 
 // 1. CẤU HÌNH LINK GOOGLE SHEET (CSV)
 const SHEET_URLS = {
-    FOOD: "https://docs.google.com/spreadsheets/d/e/2PACX-1vRJrotBdzd-po6z_Zd6fbew0pqGgdDdZjRMf7vutpfJia2aFpNyTZNdvGZxN4MfcGtRwJWUrmICvZMF/pub?gid=0&single=true&output=csv",
-    SERVICES: "https://docs.google.com/spreadsheets/d/e/2PACX-1vRJrotBdzd-po6z_Zd6fbew0pqGgdDdZjRMf7vutpfJia2aFpNyTZNdvGZxN4MfcGtRwJWUrmICvZMF/pub?gid=987608880&single=true&output=csv", 
-    JOBS: "https://docs.google.com/spreadsheets/d/e/2PACX-1vRJrotBdzd-po6z_Zd6fbew0pqGgdDdZjRMf7vutpfJia2aFpNyTZNdvGZxN4MfcGtRwJWUrmICvZMF/pub?gid=1687973723&single=true&output=csv",     
+    FOOD: "https://docs.google.com/spreadsheets/d/e/2PACX-1vTWiN7rYhho8f92YqkOWeA968S5F6KjGMswSag1p9nUtLVKUX5bSPPOyXWFWWdOBg/pub?gid=2034133228&single=true&output=csv",
+    SERVICES: "https://docs.google.com/spreadsheets/d/e/2PACX-1vTWiN7rYhho8f92YqkOWeA968S5F6KjGMswSag1p9nUtLVKUX5bSPPOyXWFWWdOBg/pub?gid=1661659821&single=true&output=csv", 
+    JOBS: "https://docs.google.com/spreadsheets/d/e/2PACX-1vTWiN7rYhho8f92YqkOWeA968S5F6KjGMswSag1p9nUtLVKUX5bSPPOyXWFWWdOBg/pub?gid=866720218&single=true&output=csv",     
     REAL_ESTATE: "" 
 };
 
@@ -98,6 +98,7 @@ const ThanhLoiMarketPage: React.FC<ThanhLoiMarketPageProps> = ({
   const [searchResults, setSearchResults] = useState<MarketListing[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   
   // PAGINATION STATE
   const [visibleCount, setVisibleCount] = useState(12);
@@ -301,7 +302,11 @@ const ThanhLoiMarketPage: React.FC<ThanhLoiMarketPageProps> = ({
         setIsLoading(false);
     };
 
-    fetchAllData();
+    fetchAllData().catch(err => {
+        console.error("Error fetching all data:", err);
+        setError("Lỗi kết nối");
+        setIsLoading(false);
+    });
   }, []);
 
   const handleCategoryClick = (catName: string) => {
@@ -577,7 +582,13 @@ const ThanhLoiMarketPage: React.FC<ThanhLoiMarketPageProps> = ({
         </div>
         
         {/* Empty State */}
-        {isSearching && searchResults.length === 0 && !isLoading && (
+        {error && (
+            <div className="error-msg" style={{textAlign: 'center', padding: '50px', color: '#ff4d4d', fontWeight: 'bold', fontSize: '18px'}}>
+                Hệ thống đang bảo trì dữ liệu. Bà con vui lòng quay lại sau vài phút nhé!
+            </div>
+        )}
+
+        {isSearching && searchResults.length === 0 && !isLoading && !error && (
             <div className="flex flex-col items-center justify-center py-16 bg-white rounded-xl border border-gray-200 shadow-sm">
                 <AlertCircle size={48} className="text-gray-300 mb-4" />
                 <h3 className="text-lg font-bold text-gray-700 mb-2">Không tìm thấy kết quả nào</h3>

@@ -41,7 +41,7 @@ interface ServiceItem {
 }
 
 // URL Google Sheet CSV (Dịch vụ)
-const SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRJrotBdzd-po6z_Zd6fbew0pqGgdDdZjRMf7vutpfJia2aFpNyTZNdvGZxN4MfcGtRwJWUrmICvZMF/pub?gid=987608880&single=true&output=csv";
+const SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTWiN7rYhho8f92YqkOWeA968S5F6KjGMswSag1p9nUtLVKUX5bSPPOyXWFWWdOBg/pub?gid=1661659821&single=true&output=csv";
 
 // Danh mục dịch vụ (ID khớp với cột loai_dich_vu trong CSV)
 const serviceCategories = [
@@ -247,9 +247,8 @@ const ServiceListingPage: React.FC<ServiceListingPageProps> = ({ onBack }) => {
         )}
 
         {error && (
-            <div className="flex flex-col items-center justify-center py-10 text-red-500 bg-white/5 rounded-xl border border-red-900/50">
-                <AlertCircle size={24} className="mb-2" />
-                <p>{error}</p>
+            <div className="error-msg" style={{textAlign: 'center', padding: '50px', color: '#ff4d4d', fontWeight: 'bold', fontSize: '18px'}}>
+                Hệ thống đang bảo trì dữ liệu. Bà con vui lòng quay lại sau vài phút nhé!
             </div>
         )}
 
