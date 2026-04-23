@@ -64,21 +64,21 @@ const SHEET_URLS = {
 
 // Dữ liệu danh mục
 const categories = [
-  { id: 1, name: "Chợ Mua Sắm", icon: <ShoppingBag size={24} />, color: "bg-teal-100 text-teal-600" },
-  { id: 2, name: "Ẩm Thực", icon: <Utensils size={24} />, color: "bg-orange-100 text-orange-600" },
-  { id: 3, name: "Dịch Vụ", icon: <Wrench size={24} />, color: "bg-blue-100 text-blue-600" },
-  { id: 4, name: "Việc Làm", icon: <Briefcase size={24} />, color: "bg-green-100 text-green-600" }, 
+  { id: 1, name: "Chợ Mua Sắm", icon: <ShoppingBag size={24} />, color: "bg-teal-500/20 text-teal-400" },
+  { id: 2, name: "Ẩm Thực", icon: <Utensils size={24} />, color: "bg-orange-500/20 text-orange-400" },
+  { id: 3, name: "Dịch Vụ", icon: <Wrench size={24} />, color: "bg-blue-500/20 text-blue-400" },
+  { id: 4, name: "Việc Làm", icon: <Briefcase size={24} />, color: "bg-green-500/20 text-green-400" }, 
   { 
     id: 5, 
     name: "KYO MALL", 
     icon: <Star size={24} />, 
-    color: "bg-pink-100 text-pink-600",
+    color: "bg-pink-500/20 text-pink-400",
     subtitle: "(Giao thương All Vietnam)"
   },
-  { id: 6, name: "Xe Cộ", icon: <Car size={24} />, color: "bg-red-100 text-red-600" },
-  { id: 7, name: "Bất động sản", icon: <Home size={24} />, color: "bg-purple-100 text-purple-600" },
-  { id: 8, name: "Góc Cộng Đồng", icon: <HeartHandshake size={24} />, color: "bg-indigo-100 text-indigo-600", subtitle: "(SOS/Tặng đồ)" },
-  { id: 9, name: "Thạnh Lợi Studio", icon: <Clapperboard size={24} />, color: "bg-gray-900 text-brand-cyan", subtitle: "NEW" },
+  { id: 6, name: "Xe Cộ", icon: <Car size={24} />, color: "bg-red-500/20 text-red-400" },
+  { id: 7, name: "Bất động sản", icon: <Home size={24} />, color: "bg-purple-500/20 text-purple-400" },
+  { id: 8, name: "Góc Cộng Đồng", icon: <HeartHandshake size={24} />, color: "bg-indigo-500/20 text-indigo-400", subtitle: "(SOS/Tặng đồ)" },
+  { id: 9, name: "Thạnh Lợi Studio", icon: <Clapperboard size={24} />, color: "bg-white/10 text-brand-cyan", subtitle: "NEW" },
 ];
 
 const ThanhLoiMarketPage: React.FC<ThanhLoiMarketPageProps> = ({ 
@@ -376,9 +376,22 @@ const ThanhLoiMarketPage: React.FC<ThanhLoiMarketPageProps> = ({
   const displayListings = currentSource.slice(0, visibleCount);
 
   return (
-    <div className="bg-gray-50 min-h-screen font-sans text-gray-900">
+    <div className="relative font-sans text-white bg-black min-h-screen">
+      {/* Sci-Fi Background wrapper taking up full screen, fixed to viewport */}
+      <div className="fixed inset-0 z-0">
+        <div 
+          className="absolute inset-0 bg-cover bg-center bg-no-repeat animate-scifi-pan opacity-60 mix-blend-screen" 
+          style={{ backgroundImage: `url('/ChatGPT%20Image%2008_45_42%2023%20thg%204,%202026.png')` }}
+        ></div>
+        {/* Dark overlay gradients for content readability */}
+        <div className="absolute inset-0 bg-gradient-to-b from-[#050505]/95 via-[#050505]/75 to-[#050505]/95"></div>
+        <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-5"></div>
+      </div>
+      
+      {/* Content Wrapper to sit above background */}
+      <div className="relative z-10 flex flex-col min-h-screen">
       {/* 1. HEADER (Cyberpunk Style - Dark) */}
-      <div className="sticky top-0 z-50 bg-[#050505]/95 backdrop-blur-md border-b border-gray-800 h-16 flex items-center justify-between px-4 md:px-8 shadow-md">
+      <div className="sticky top-0 z-50 bg-[#050505]/80 backdrop-blur-xl border-b border-brand-cyan/20 h-16 flex items-center justify-between px-4 md:px-8 shadow-[0_4px_30px_rgba(0,255,255,0.1)]">
          <div className="flex items-center gap-4">
             <button 
                 onClick={onBack}
@@ -408,17 +421,16 @@ const ThanhLoiMarketPage: React.FC<ThanhLoiMarketPageProps> = ({
       </div>
 
       {/* 2. HERO SECTION */}
-      <section className="relative bg-white border-b border-gray-200">
-        <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-5"></div>
-        <div className="max-w-7xl mx-auto px-4 py-12 md:py-16 text-center relative z-10">
+      <section className="relative min-h-[400px] flex items-center border-b border-white/5">
+        <div className="max-w-7xl mx-auto px-4 py-16 md:py-24 text-center relative z-10 w-full">
             <motion.h1 
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="text-3xl md:text-5xl font-black text-gray-900 mb-4 tracking-tight"
+                className="text-4xl md:text-5xl lg:text-6xl font-black text-white mb-4 tracking-tight uppercase drop-shadow-[0_0_15px_rgba(0,255,255,0.5)]"
             >
-                Kết nối giao thương <span className="text-green-600">Quê Nhà</span>
+                Kết nối giao thương <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-cyan to-blue-500 text-glow">Quê Nhà</span>
             </motion.h1>
-            <p className="text-gray-500 mb-8 max-w-2xl mx-auto">
+            <p className="text-gray-300 md:text-lg mb-8 max-w-2xl mx-auto font-medium drop-shadow-md backdrop-blur-sm bg-black/20 p-4 rounded-xl border border-white/5">
                 Tìm kiếm sản phẩm, dịch vụ và việc làm tại xã Thạnh Lợi nhanh chóng, uy tín và hoàn toàn miễn phí.
             </p>
 
@@ -428,22 +440,22 @@ const ThanhLoiMarketPage: React.FC<ThanhLoiMarketPageProps> = ({
                     id="search-input"
                     type="text" 
                     placeholder="Bạn đang tìm gì? (VD: Cơm tấm, Thợ điện, Phụ hồ...)"
-                    className="w-full pl-12 pr-28 py-4 rounded-full border border-gray-300 shadow-lg focus:outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500 bg-white text-gray-900 transition-all"
+                    className="w-full pl-12 pr-28 py-4 rounded-full border border-brand-cyan/30 shadow-[0_0_30px_rgba(0,255,255,0.15)] focus:outline-none focus:border-brand-cyan focus:ring-1 focus:ring-brand-cyan bg-[#121212]/80 backdrop-blur-md text-white placeholder-gray-400 transition-all font-medium"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     onKeyDown={handleKeyDown}
                 />
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-green-500 transition-colors" size={20} />
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-brand-cyan group-focus-within:text-white transition-colors" size={20} />
                 
                 <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-2">
                     {searchTerm && (
-                        <button onClick={clearSearch} className="p-2 text-gray-400 hover:text-gray-600">
+                        <button onClick={clearSearch} className="p-2 text-gray-400 hover:text-white transition-colors">
                             <XCircle size={20} />
                         </button>
                     )}
                     <button 
                         onClick={handleSearch}
-                        className="bg-gray-900 text-white px-6 py-2 rounded-full font-bold text-sm hover:bg-black transition-colors"
+                        className="bg-brand-cyan text-black px-6 py-2 rounded-full font-bold text-sm hover:bg-white hover:shadow-[0_0_15px_rgba(0,255,255,0.8)] transition-all uppercase tracking-wide"
                     >
                         Tìm kiếm
                     </button>
@@ -456,8 +468,8 @@ const ThanhLoiMarketPage: React.FC<ThanhLoiMarketPageProps> = ({
       {!isSearching && (
         <section className="max-w-7xl mx-auto px-4 py-10">
             <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-                    <Star className="text-yellow-500 fill-yellow-500" size={20} /> Danh mục phổ biến
+                <h2 className="text-xl font-bold text-white flex items-center gap-2 drop-shadow-[0_0_10px_rgba(255,255,255,0.2)]">
+                    <Star className="text-yellow-400 fill-yellow-400" size={20} /> Danh mục phổ biến
                 </h2>
             </div>
             
@@ -467,15 +479,15 @@ const ThanhLoiMarketPage: React.FC<ThanhLoiMarketPageProps> = ({
                         key={cat.id}
                         whileHover={{ y: -5 }}
                         onClick={() => handleCategoryClick(cat.name)}
-                        className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex flex-col items-center justify-center gap-3 cursor-pointer hover:shadow-md transition-all text-center h-full"
+                        className="bg-white/5 backdrop-blur-md p-4 rounded-xl border border-white/10 flex flex-col items-center justify-center gap-3 cursor-pointer hover:bg-white/10 hover:border-brand-cyan/50 hover:shadow-[0_0_15px_rgba(0,255,255,0.2)] transition-all duration-300 text-center h-full group"
                     >
-                        <div className={`p-3 rounded-full ${cat.color}`}>
+                        <div className={`p-3 rounded-full ${cat.color} group-hover:scale-110 transition-transform`}>
                             {cat.icon}
                         </div>
                         <div>
-                            <span className="text-sm font-semibold text-gray-700 block leading-tight">{cat.name}</span>
+                            <span className="text-sm font-semibold text-gray-200 block leading-tight group-hover:text-white transition-colors">{cat.name}</span>
                             {(cat as any).subtitle && (
-                                <span className={`text-[9px] font-bold mt-1 block tracking-tight ${cat.id === 9 ? 'text-brand-cyan' : 'text-red-500'}`}>{(cat as any).subtitle}</span>
+                                <span className={`text-[9px] font-bold mt-1 block tracking-tight ${cat.id === 9 ? 'text-brand-cyan drop-shadow-[0_0_5px_rgba(0,255,255,0.8)]' : 'text-red-400'}`}>{(cat as any).subtitle}</span>
                             )}
                         </div>
                     </motion.div>
@@ -570,12 +582,12 @@ const ThanhLoiMarketPage: React.FC<ThanhLoiMarketPageProps> = ({
       {/* 5. LISTING GRID (Kết quả tìm kiếm hoặc Tin mới) */}
       <section className="max-w-7xl mx-auto px-4 pb-20 mt-8">
         <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+            <h2 className="text-xl font-bold text-white flex items-center gap-2 drop-shadow-md">
                 {isSearching ? `Kết quả tìm kiếm cho "${searchTerm}"` : "Tin đăng mới nhất"} 
-                {isLoading && <RefreshCw className="animate-spin text-green-600" size={16} />}
+                {isLoading && <RefreshCw className="animate-spin text-brand-cyan" size={16} />}
             </h2>
             {isSearching && (
-                <button onClick={clearSearch} className="text-sm text-blue-600 hover:underline">
+                <button onClick={clearSearch} className="text-sm text-brand-cyan hover:text-white hover:underline transition-colors">
                     Xem tất cả tin
                 </button>
             )}
@@ -589,13 +601,13 @@ const ThanhLoiMarketPage: React.FC<ThanhLoiMarketPageProps> = ({
         )}
 
         {isSearching && searchResults.length === 0 && !isLoading && !error && (
-            <div className="flex flex-col items-center justify-center py-16 bg-white rounded-xl border border-gray-200 shadow-sm">
-                <AlertCircle size={48} className="text-gray-300 mb-4" />
-                <h3 className="text-lg font-bold text-gray-700 mb-2">Không tìm thấy kết quả nào</h3>
-                <p className="text-gray-500 text-sm">Rất tiếc, chưa tìm thấy tin nào ở Thạnh Lợi cho từ khóa "{searchTerm}".</p>
+            <div className="flex flex-col items-center justify-center py-16 bg-black/40 backdrop-blur-md rounded-xl border border-white/10 shadow-[0_4px_30px_rgba(0,0,0,0.5)]">
+                <AlertCircle size={48} className="text-brand-cyan/50 mb-4" />
+                <h3 className="text-lg font-bold text-white mb-2">Không tìm thấy kết quả nào</h3>
+                <p className="text-gray-400 text-sm">Rất tiếc, chưa tìm thấy tin nào ở Thạnh Lợi cho từ khóa "{searchTerm}".</p>
                 <button 
                     onClick={clearSearch} 
-                    className="mt-6 bg-gray-100 text-gray-700 px-6 py-2 rounded-full font-bold text-sm hover:bg-gray-200 transition-colors"
+                    className="mt-6 bg-white/10 text-white border border-white/20 px-6 py-2 rounded-full font-bold text-sm hover:bg-brand-cyan hover:text-black hover:border-brand-cyan transition-all shadow-md"
                 >
                     Thử từ khóa khác
                 </button>
@@ -610,33 +622,33 @@ const ThanhLoiMarketPage: React.FC<ThanhLoiMarketPageProps> = ({
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.3 }}
-                    className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-lg transition-shadow duration-300 group flex flex-col h-full"
+                    className="bg-[#121212]/70 backdrop-blur-md rounded-xl shadow-[0_4px_20px_rgba(0,0,0,0.5)] border border-brand-cyan/20 overflow-hidden hover:shadow-[0_0_20px_rgba(0,255,255,0.2)] hover:border-brand-cyan/50 transition-all duration-300 group flex flex-col h-full"
                 >
                     
                     {/* --- POLYMORPHIC CARD UI --- */}
                     
                     {/* TYPE: JOB (Giao diện Việc làm) */}
                     {item.type === 'job' ? (
-                        <div className="p-5 flex flex-col h-full bg-gradient-to-b from-white to-gray-50">
+                        <div className="p-5 flex flex-col h-full bg-gradient-to-b from-transparent to-black/40">
                             <div className="flex justify-between items-start mb-2">
-                                <span className="bg-green-100 text-green-700 text-[10px] font-bold px-2 py-1 rounded uppercase">Việc Làm</span>
+                                <span className="bg-green-500/20 text-green-400 border border-green-500/30 text-[10px] font-bold px-2 py-1 rounded uppercase">Việc Làm</span>
                             </div>
-                            <h3 className="font-bold text-gray-900 text-lg mb-1 leading-tight">{item.title}</h3>
-                            <p className="text-amber-500 font-black text-xl mb-4">{item.price}</p>
+                            <h3 className="font-bold text-white text-lg mb-1 leading-tight group-hover:text-brand-cyan transition-colors">{item.title}</h3>
+                            <p className="text-amber-400 font-black text-xl mb-4">{item.price}</p>
                             
                             <div className="mt-auto space-y-3">
-                                <div className="flex items-center gap-2 text-sm text-gray-600">
-                                    <div className="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center text-xs font-bold text-gray-500">
+                                <div className="flex items-center gap-2 text-sm text-gray-300">
+                                    <div className="w-6 h-6 rounded-full bg-gray-800 flex items-center justify-center text-xs font-bold text-gray-400 border border-gray-700">
                                         {item.seller.charAt(0)}
                                     </div>
                                     <span className="truncate">{item.seller}</span>
                                 </div>
                                 <div className="flex items-center gap-1 text-xs text-gray-400">
-                                    <MapPin size={12} /> {item.location}
+                                    <MapPin size={12} className="text-brand-cyan" /> {item.location}
                                 </div>
                                 <a 
                                     href={`tel:${item.phone}`} 
-                                    className="w-full block bg-green-600 text-white text-center py-3 rounded-lg font-bold uppercase text-sm hover:bg-green-500 transition-colors shadow-green-100 shadow-lg"
+                                    className="w-full block bg-green-600/80 border border-green-500/50 text-white text-center py-3 rounded-lg font-bold uppercase text-sm hover:bg-green-500 transition-colors shadow-[0_0_15px_rgba(34,197,94,0.3)]"
                                 >
                                     Gọi Xin Việc
                                 </a>
@@ -645,35 +657,35 @@ const ThanhLoiMarketPage: React.FC<ThanhLoiMarketPageProps> = ({
 
                     /* TYPE: SERVICE (Giao diện Dịch vụ) */
                     ) : item.type === 'service' ? (
-                         <div className="p-5 flex flex-col h-full">
+                         <div className="p-5 flex flex-col h-full bg-gradient-to-b from-transparent to-black/40">
                             <div className="flex items-center gap-4 mb-4">
-                                <div className="w-14 h-14 rounded-full bg-gray-100 border border-gray-200 overflow-hidden flex-shrink-0">
+                                <div className="w-14 h-14 rounded-full bg-gray-800 border border-brand-cyan/30 overflow-hidden flex-shrink-0 shadow-[0_0_10px_rgba(0,255,255,0.2)]">
                                     {item.image ? (
                                         <img src={item.image} alt={item.title} className="w-full h-full object-cover" />
                                     ) : (
-                                        <div className="w-full h-full flex items-center justify-center text-gray-400 font-bold text-xl uppercase">{item.title.charAt(0)}</div>
+                                        <div className="w-full h-full flex items-center justify-center text-gray-500 font-bold text-xl uppercase">{item.title.charAt(0)}</div>
                                     )}
                                 </div>
                                 <div>
-                                    <span className="bg-blue-100 text-blue-600 text-[10px] font-bold px-2 py-0.5 rounded uppercase">{item.seller}</span>
-                                    <h3 className="font-bold text-gray-900 text-base leading-tight mt-1 line-clamp-1">{item.title}</h3>
+                                    <span className="bg-blue-500/20 text-blue-400 border border-blue-500/30 text-[10px] font-bold px-2 py-0.5 rounded uppercase">{item.seller}</span>
+                                    <h3 className="font-bold text-white text-base leading-tight mt-1 line-clamp-1 group-hover:text-brand-cyan transition-colors">{item.title}</h3>
                                 </div>
                             </div>
                             
                             <div className="mt-auto">
-                                <div className="flex items-center gap-1 text-xs text-gray-500 mb-4 bg-gray-50 p-2 rounded">
-                                    <MapPin size={12} className="text-red-500"/> {item.location}
+                                <div className="flex items-center gap-1 text-xs text-gray-400 mb-4 bg-black/40 border border-white/5 p-2 rounded">
+                                    <MapPin size={12} className="text-brand-cyan"/> {item.location}
                                 </div>
                                 <div className="grid grid-cols-2 gap-2">
-                                     <a href={`tel:${item.phone}`} className="bg-green-600 text-white py-2 rounded text-xs font-bold uppercase flex items-center justify-center gap-1 hover:bg-green-500 transition-colors">
+                                     <a href={`tel:${item.phone}`} className="bg-green-600/80 border border-green-500/50 text-white py-2 rounded text-xs font-bold uppercase flex items-center justify-center gap-1 hover:bg-green-500 transition-colors shadow-[0_0_10px_rgba(34,197,94,0.3)]">
                                         <Phone size={14} /> Gọi Thợ
                                      </a>
                                      {item.linkProfile ? (
-                                        <a href={item.linkProfile} target="_blank" rel="noreferrer" className="bg-blue-600 text-white py-2 rounded text-xs font-bold uppercase flex items-center justify-center gap-1 hover:bg-blue-500 transition-colors">
+                                        <a href={item.linkProfile} target="_blank" rel="noreferrer" className="bg-blue-600/80 border border-blue-500/50 text-white py-2 rounded text-xs font-bold uppercase flex items-center justify-center gap-1 hover:bg-blue-500 transition-colors shadow-[0_0_10px_rgba(59,130,246,0.3)]">
                                             <User size={14} /> Xem Hồ Sơ
                                         </a>
                                      ) : (
-                                        <a href={`https://zalo.me/${item.phone}`} target="_blank" rel="noreferrer" className="bg-blue-600 text-white py-2 rounded text-xs font-bold uppercase flex items-center justify-center gap-1 hover:bg-blue-500 transition-colors">
+                                        <a href={`https://zalo.me/${item.phone}`} target="_blank" rel="noreferrer" className="bg-blue-600/80 border border-blue-500/50 text-white py-2 rounded text-xs font-bold uppercase flex items-center justify-center gap-1 hover:bg-blue-500 transition-colors shadow-[0_0_10px_rgba(59,130,246,0.3)]">
                                             <MessageCircle size={14} /> Zalo
                                         </a>
                                      )}
@@ -684,54 +696,54 @@ const ThanhLoiMarketPage: React.FC<ThanhLoiMarketPageProps> = ({
                     /* TYPE: FOOD & DEFAULT (Giao diện Món ăn/Mặc định) */
                     ) : (
                         <>
-                            <div className="relative h-48 overflow-hidden bg-gray-100">
+                            <div className="relative h-48 overflow-hidden bg-gray-900 border-b border-brand-cyan/20">
                                 {item.image && item.image.length > 5 ? (
                                     <img 
                                         src={item.image} 
                                         alt={item.title} 
-                                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
                                         onError={(e) => {
                                             (e.target as HTMLImageElement).src = 'https://placehold.co/600x400?text=No+Image';
                                         }}
                                     />
                                 ) : (
-                                    <div className="w-full h-full flex items-center justify-center bg-gray-200 text-gray-400 font-bold uppercase text-2xl">
+                                    <div className="w-full h-full flex items-center justify-center bg-gray-800 text-gray-500 font-bold uppercase text-2xl">
                                         {item.title.charAt(0)}
                                     </div>
                                 )}
-                                <span className="absolute top-2 left-2 bg-black/60 backdrop-blur-sm text-white text-[10px] font-bold px-2 py-1 rounded">
+                                <span className="absolute top-2 left-2 bg-black/60 backdrop-blur-sm text-brand-cyan border border-brand-cyan/30 text-[10px] font-bold px-2 py-1 rounded">
                                     {item.category}
                                 </span>
                             </div>
-                            <div className="p-4 flex flex-col flex-grow">
-                                <h3 className="font-bold text-gray-900 mb-2 line-clamp-2 min-h-[40px] text-sm md:text-base leading-tight">
+                            <div className="p-4 flex flex-col flex-grow bg-gradient-to-b from-transparent to-black/60">
+                                <h3 className="font-bold text-white mb-2 line-clamp-2 min-h-[40px] text-sm md:text-base leading-tight group-hover:text-brand-cyan transition-colors">
                                     {item.title}
                                 </h3>
-                                <p className={`font-extrabold text-lg mb-3 ${item.price === "Liên hệ" || item.price === "Thỏa thuận" ? 'text-blue-600' : 'text-red-600'}`}>
+                                <p className={`font-extrabold text-lg mb-3 ${item.price === "Liên hệ" || item.price === "Thỏa thuận" ? 'text-brand-cyan' : 'text-green-400'}`}>
                                     {item.price}
                                 </p>
                                 
-                                <div className="flex items-center gap-2 text-gray-500 text-xs mb-4">
-                                    <MapPin size={14} className="flex-shrink-0" /> <span className="truncate">{item.location}</span>
+                                <div className="flex items-center gap-2 text-gray-400 text-xs mb-4">
+                                    <MapPin size={14} className="flex-shrink-0 text-brand-cyan/70" /> <span className="truncate">{item.location}</span>
                                 </div>
                                 
-                                <div className="flex items-center justify-between pt-4 border-t border-gray-100 mt-auto">
+                                <div className="flex items-center justify-between pt-4 border-t border-white/10 mt-auto">
                                     <div className="flex items-center gap-2 max-w-[50%]">
-                                        <div className="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center text-xs font-bold text-gray-600 flex-shrink-0 uppercase">
+                                        <div className="w-6 h-6 rounded-full bg-gray-800 flex items-center justify-center text-xs font-bold text-gray-400 flex-shrink-0 uppercase border border-gray-700">
                                             {item.seller.charAt(0)}
                                         </div>
-                                        <span className="text-xs font-semibold text-gray-700 truncate">{item.seller}</span>
+                                        <span className="text-xs font-semibold text-gray-300 truncate">{item.seller}</span>
                                     </div>
                                     
                                     <div className="flex gap-2">
                                         {item.phone ? (
                                             <>
-                                                <a href={`tel:${item.phone}`} className="bg-green-600 hover:bg-green-700 text-white p-2 rounded-full transition-colors" title="Gọi ngay">
+                                                <a href={`tel:${item.phone}`} className="bg-green-600/80 border border-green-500/50 hover:bg-green-500 text-white p-2 rounded-full transition-colors shadow-[0_0_10px_rgba(34,197,94,0.3)]" title="Gọi ngay">
                                                     <Phone size={16} />
                                                 </a>
                                             </>
                                         ) : (
-                                            <button className="bg-gray-300 text-gray-500 p-2 rounded-full cursor-not-allowed">
+                                            <button className="bg-gray-800 text-gray-600 p-2 rounded-full cursor-not-allowed border border-gray-700">
                                                 <Phone size={16} />
                                             </button>
                                         )}
@@ -746,12 +758,15 @@ const ThanhLoiMarketPage: React.FC<ThanhLoiMarketPageProps> = ({
         
         {/* PAGINATION BUTTON (LOAD MORE) */}
         {!isSearching && visibleCount < listings.length && (
-            <div className="text-center mt-12">
+            <div className="text-center mt-12 mb-8">
                 <button 
                     onClick={handleLoadMore}
-                    className="group bg-white border border-gray-300 text-gray-600 px-8 py-3 rounded-full font-bold text-sm hover:bg-gray-50 hover:border-gray-400 hover:text-gray-900 transition-all flex items-center gap-2 mx-auto"
+                    className="group relative px-8 py-3 bg-transparent overflow-hidden rounded-full border border-brand-cyan/50 text-brand-cyan font-bold uppercase tracking-widest hover:border-brand-cyan transition-all flex items-center gap-2 mx-auto shadow-[0_0_15px_rgba(0,255,255,0.1)] hover:shadow-[0_0_20px_rgba(0,255,255,0.3)] backdrop-blur-md"
                 >
-                    Xem thêm tin đăng <ChevronDown size={16} className="group-hover:translate-y-1 transition-transform" />
+                    <div className="absolute inset-0 w-0 bg-brand-cyan/20 transition-all duration-[250ms] ease-out group-hover:w-full"></div>
+                    <span className="relative flex items-center gap-2">
+                        Xem thêm tin đăng <ChevronDown size={16} className="group-hover:translate-y-1 transition-transform" />
+                    </span>
                 </button>
             </div>
         )}
@@ -759,6 +774,7 @@ const ThanhLoiMarketPage: React.FC<ThanhLoiMarketPageProps> = ({
 
       {/* Footer */}
       <Footer />
+      </div>
     </div>
   );
 };

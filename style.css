@@ -67,6 +67,16 @@ body {
     scrollbar-width: none;
 }
 
+@keyframes scifiPan {
+  0% { transform: scale(1) translate(0px, 0px); }
+  50% { transform: scale(1.1) translate(20px, 10px); }
+  100% { transform: scale(1) translate(0px, 0px); }
+}
+
+.animate-scifi-pan {
+  animation: scifiPan 20s infinite alternate ease-in-out;
+}
+
 .custom-scrollbar::-webkit-scrollbar {
   width: 6px;
 }

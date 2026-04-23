@@ -74,9 +74,14 @@ const Navbar: React.FC<NavbarProps> = ({ onOpenMerch }) => {
 
           {/* Desktop CTA */}
           <div className="hidden md:block">
-            <button className="bg-brand-cyan text-brand-black px-6 py-2 font-bold uppercase text-sm tracking-wide hover:bg-white transition-colors duration-300 clip-path-slant">
+            <a 
+              href="https://zalo.me/0386328473"
+              target="_blank"
+              rel="noreferrer"
+              className="inline-block bg-brand-cyan text-brand-black px-6 py-2 font-bold uppercase text-sm tracking-wide hover:bg-white transition-colors duration-300 clip-path-slant"
+            >
               Hợp tác ngay
-            </button>
+            </a>
           </div>
 
           {/* Mobile menu button */}
@@ -106,7 +111,9 @@ const Navbar: React.FC<NavbarProps> = ({ onOpenMerch }) => {
               </a>
             ))}
             <a
-              href="#contact"
+              href="https://zalo.me/0386328473"
+              target="_blank"
+              rel="noreferrer"
               onClick={() => setIsOpen(false)}
               className="text-brand-black bg-brand-cyan block px-3 py-2 rounded-md text-base font-bold uppercase mt-4 text-center"
             >
