@@ -380,12 +380,12 @@ const ThanhLoiMarketPage: React.FC<ThanhLoiMarketPageProps> = ({
       {/* Sci-Fi Background wrapper taking up full screen, fixed to viewport */}
       <div className="fixed inset-0 z-0 bg-black">
         <div 
-          className="absolute inset-0 bg-cover bg-center bg-no-repeat animate-scifi-pan opacity-60 mix-blend-screen" 
-          style={{ backgroundImage: `url('/scifi-bg.png')` }}
+          className="absolute inset-0 bg-cover bg-center bg-no-repeat animate-scifi-pan opacity-50 mix-blend-screen" 
+          style={{ backgroundImage: `url('/thanhloiquetoi.png')` }}
         ></div>
         {/* Dark overlay gradients for content readability */}
-        <div className="absolute inset-0 bg-gradient-to-b from-[#050505]/95 via-[#050505]/75 to-[#050505]/95"></div>
-        <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-5"></div>
+        <div className="absolute inset-0 bg-gradient-to-b from-black/80 via-black/60 to-[#050505]/90"></div>
+        <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10"></div>
       </div>
       
       {/* Content Wrapper to sit above background */}
