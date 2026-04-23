@@ -378,10 +378,10 @@ const ThanhLoiMarketPage: React.FC<ThanhLoiMarketPageProps> = ({
   return (
     <div className="relative font-sans text-white bg-black min-h-screen">
       {/* Sci-Fi Background wrapper taking up full screen, fixed to viewport */}
-      <div className="fixed inset-0 z-0">
+      <div className="fixed inset-0 z-0 bg-black">
         <div 
           className="absolute inset-0 bg-cover bg-center bg-no-repeat animate-scifi-pan opacity-60 mix-blend-screen" 
-          style={{ backgroundImage: `url('/ChatGPT%20Image%2008_45_42%2023%20thg%204,%202026.png')` }}
+          style={{ backgroundImage: `url('/scifi-bg.png')` }}
         ></div>
         {/* Dark overlay gradients for content readability */}
         <div className="absolute inset-0 bg-gradient-to-b from-[#050505]/95 via-[#050505]/75 to-[#050505]/95"></div>
