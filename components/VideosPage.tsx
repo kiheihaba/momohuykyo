@@ -163,21 +163,27 @@ const UploadModal = ({ isOpen, onClose, user }: { isOpen: boolean, onClose: () =
         }, 
         (error) => {
           console.error("Upload error", error);
-          alert("Lỗi khi tải lên. Có thể do giới hạn quyền của Firebase Storage.");
+          alert("Lỗi khi tải lên: " + error.message);
           setUploading(false);
-        }, 
+        },
         async () => {
-          const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-          await addDoc(collection(db, 'videos'), {
-            url: downloadURL,
-            description,
-            author: user.displayName || 'Người dùng Ẩn danh',
-            createdAt: serverTimestamp()
-          });
-          setUploading(false);
-          setFile(null);
-          setDescription('');
-          onClose();
+          try {
+            const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+            await addDoc(collection(db, 'videos'), {
+              url: downloadURL,
+              description,
+              author: user.displayName || 'Người dùng Ẩn danh',
+              createdAt: serverTimestamp()
+            });
+            setUploading(false);
+            setFile(null);
+            setDescription('');
+            onClose();
+          } catch (err: any) {
+            console.error("Firestore error", err);
+            alert("Lỗi khi lưu thông tin video: " + err.message);
+            setUploading(false);
+          }
         }
       );
     } catch (e) {
