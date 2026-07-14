@@ -117,9 +117,14 @@ const ServicePage: React.FC<ServicePageProps> = ({ onBack }) => {
               <p className="text-gray-400 mb-10 leading-relaxed text-lg">
                 Xây dựng Website bán hàng, Landing Page doanh nghiệp chuẩn SEO. Phong cách thiết kế hiện đại, tối ưu trải nghiệm người dùng (UX/UI) và tỷ lệ chuyển đổi.
               </p>
-              <button className="text-brand-cyan font-bold uppercase text-sm tracking-widest flex items-center gap-2 group-hover:gap-4 transition-all border-b border-brand-cyan/30 pb-1 hover:border-brand-cyan">
-                Tư vấn báo giá <ArrowLeft className="rotate-180" size={16} />
-              </button>
+              <a 
+                href="https://webhuykyo.vercel.app/" 
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex text-brand-cyan font-bold uppercase text-sm tracking-widest items-center gap-2 group-hover:gap-4 transition-all border-b border-brand-cyan/30 pb-1 hover:border-brand-cyan"
+              >
+                Xem dịch vụ <ArrowLeft className="rotate-180" size={16} />
+              </a>
             </motion.div>
           </div>
         </div>

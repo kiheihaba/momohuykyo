@@ -4,6 +4,7 @@ import { NavItem } from '../types';
 
 const navItems: NavItem[] = [
   { label: 'Trang chủ', href: '#home' },
+  { label: 'VIDEOS', href: '#videos' },
   { label: 'CỬA HÀNG', href: '#about' }, // Href giữ nguyên nhưng sẽ bị preventDefault
   { label: 'Hệ sinh thái', href: '#ecosystem' },
   { label: 'Tầm nhìn', href: '#vision' },
