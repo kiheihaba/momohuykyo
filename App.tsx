@@ -12,7 +12,6 @@ import ServicePage from './components/ServicePage';
 import PrivacyPolicy from './components/PrivacyPolicy';
 import BlogPage from './components/BlogPage';
 import AllProjectsPage from './components/AllProjectsPage';
-import VideosPage from './components/VideosPage';
 import ThanhLoiMarketPage from './components/ThanhLoiMarketPage';
 import FoodBeveragePage from './components/FoodBeveragePage';
 import ServiceListingPage from './components/ServiceListingPage';
@@ -30,7 +29,6 @@ const App: React.FC = () => {
   const [showPrivacy, setShowPrivacy] = useState(false);
   const [showBlog, setShowBlog] = useState(false);
   const [showAllProjects, setShowAllProjects] = useState(false);
-  const [showVideos, setShowVideos] = useState(false);
   const [showMarket, setShowMarket] = useState(false);
   const [showFoodPage, setShowFoodPage] = useState(false);
   const [showServiceListing, setShowServiceListing] = useState(false);
@@ -49,7 +47,6 @@ const App: React.FC = () => {
     setShowPrivacy(false);
     setShowBlog(false);
     setShowAllProjects(false);
-    setShowVideos(false);
     setShowMarket(false);
     setShowFoodPage(false);
     setShowServiceListing(false);
@@ -81,7 +78,6 @@ const App: React.FC = () => {
       case '#privacy': setShowPrivacy(true); break;
       case '#blog': setShowBlog(true); break;
       case '#projects': setShowAllProjects(true); break;
-      case '#videos': setShowVideos(true); break;
       case '#thanhloiquetoi': setShowMarket(true); break;
       case '#thanhloiquetoi-food': setShowFoodPage(true); break;
       case '#thanhloiquetoi-services': setShowServiceListing(true); break;
@@ -139,7 +135,6 @@ const App: React.FC = () => {
   if (showServices) return <ServicePage onBack={handleBackToHome} />;
   if (showPrivacy) return <PrivacyPolicy onBack={handleBackToHome} />;
   if (showBlog) return <BlogPage onBack={handleBackToHome} />;
-  if (showVideos) return <VideosPage onBack={handleBackToHome} />;
   
   if (showFoodPage) return <FoodBeveragePage onBack={handleBackToMarket} />;
   if (showServiceListing) return <ServiceListingPage onBack={handleBackToMarket} />;
